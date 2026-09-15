@@ -8,7 +8,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Invitation par e-mail à rejoindre un projet d'enquête (lien `FRONTEND_URL/invitations/accept?token=…`).
+ * Invitation par e-mail à rejoindre un projet d'enquête (lien `FRONTEND_URL/invitations/{token}`).
  * Envoyée via `Notification::route('mail', $email)->notify(...)` (destinataire sans compte possible).
  */
 class ProjectInvitationNotification extends Notification
@@ -49,7 +49,7 @@ class ProjectInvitationNotification extends Notification
 
     public static function acceptUrl(ProjectInvitation $invitation): string
     {
-        return InvitationResource::joinUrl($invitation) ?? rtrim((string) config('app.frontend_url'), '/').'/invitations/accept';
+        return InvitationResource::joinUrl($invitation) ?? rtrim((string) config('app.frontend_url'), '/').'/invitations';
     }
 
     /** @return array<string, mixed> */

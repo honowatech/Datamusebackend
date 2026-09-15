@@ -56,7 +56,7 @@ class InvitationResource extends JsonResource
     }
 
     /**
-     * Lien d'acceptation ouvert par le frontend : `{FRONTEND_URL}/invitations/accept?token=…`.
+     * Lien d'acceptation ouvert par le frontend : `{FRONTEND_URL}/invitations/{token}`.
      */
     public static function joinUrl(ProjectInvitation $invitation): ?string
     {
@@ -64,7 +64,7 @@ class InvitationResource extends JsonResource
             return null;
         }
 
-        return rtrim((string) config('app.frontend_url'), '/').'/invitations/accept?token='.$invitation->token;
+        return rtrim((string) config('app.frontend_url'), '/').'/invitations/'.$invitation->token;
     }
 
     private function canSeeSecrets(?User $user): bool
