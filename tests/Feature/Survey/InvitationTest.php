@@ -77,7 +77,7 @@ class InvitationTest extends TestCase
 
         $invitation = ProjectInvitation::findOrFail($response->json('data.id'));
         $this->assertSame(64, strlen($invitation->token));
-        $this->assertSame(config('app.frontend_url').'/invitations/accept?token='.$invitation->token, $response->json('data.join_url'));
+        $this->assertSame(config('app.frontend_url').'/invitations/'.$invitation->token, $response->json('data.join_url'));
         $this->assertTrue($invitation->expires_at->between(now()->addDays(13), now()->addDays(15)), 'expiration par défaut +14 jours');
 
         Notification::assertSentOnDemand(
