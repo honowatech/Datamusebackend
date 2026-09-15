@@ -35,4 +35,24 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Fournisseurs IA (clés serveur globales, modèles par défaut)
+    |--------------------------------------------------------------------------
+    |
+    | Résolution d'une clé : corps de requête `apiKey` → clé chiffrée de l'utilisateur → clé serveur
+    | (App\Support\ApiKeyResolver). Ne jamais lire env() ailleurs que dans config/ (config:cache).
+    |
+    */
+
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-1.5-flash'),
+    ],
+
+    'deepseek' => [
+        'key' => env('DEEPSEEK_API_KEY'),
+        'model' => env('DEEPSEEK_MODEL', 'deepseek-chat'),
+    ],
+
 ];

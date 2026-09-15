@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\TargetDatabase;
 use App\Models\BusinessMetric;
+use App\Support\ApiKeyResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Config;
@@ -12,6 +13,10 @@ use Exception;
 
 class ChatController extends Controller
 {
+    public function __construct(private readonly ApiKeyResolver $apiKeys)
+    {
+    }
+
     /**
      * Set up dynamic database connection using a saved configuration ID
      */
@@ -70,20 +75,12 @@ class ChatController extends Controller
             $driver = $dbConfig->driver ?? 'mysql';
 
             $provider = $request->provider ?? 'gemini';
-            $apiKey = $request->apiKey;
-
-            if (empty($apiKey)) {
-                if ($provider === 'deepseek') {
-                    $apiKey = $user->deepseek_api_key ?: env('DEEPSEEK_API_KEY');
-                } else {
-                    $apiKey = $user->gemini_api_key ?: env('GEMINI_API_KEY');
-                }
-            }
+            $apiKey = $this->apiKeys->resolve($request, $user, $provider);
 
             if (empty($apiKey)) {
                 return response()->json([
                     'success' => false,
-                    'message' => "La clé API pour " . ucfirst($provider) . " n'est pas configurée dans les paramètres d'API de votre compte ni sur le serveur."
+                    'message' => ApiKeyResolver::missingKeyMessage($provider)
                 ], 400);
             }
 
@@ -235,15 +232,7 @@ class ChatController extends Controller
 
         $user = $request->user();
         $provider = $request->provider ?? 'gemini';
-        $apiKey = $request->apiKey;
-
-        if (empty($apiKey)) {
-            if ($provider === 'deepseek') {
-                $apiKey = $user->deepseek_api_key ?: env('DEEPSEEK_API_KEY');
-            } else {
-                $apiKey = $user->gemini_api_key ?: env('GEMINI_API_KEY');
-            }
-        }
+        $apiKey = $this->apiKeys->resolve($request, $user, $provider);
 
         if (empty($apiKey)) {
             return response()->json(['success' => false, 'message' => "Clé API non configurée."], 400);
@@ -269,7 +258,7 @@ Instructions :
                     'Authorization' => "Bearer {$apiKey}",
                     'Content-Type' => 'application/json',
                 ])->post("https://api.deepseek.com/v1/chat/completions", [
-                    "model" => "deepseek-chat",
+                    "model" => \App\Services\LlmProviderService::defaultModel('deepseek'),
                     "messages" => [
                         ["role" => "system", "content" => $systemInstruction],
                         ["role" => "user", "content" => $promptText]
@@ -282,7 +271,7 @@ Instructions :
                 $aiResponse = $data['choices'][0]['message']['content'] ?? '';
             } else {
                 $response = Http::post(
-                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}",
+                    "https://generativelanguage.googleapis.com/v1beta/models/" . \App\Services\LlmProviderService::defaultModel('gemini') . ":generateContent?key={$apiKey}",
                     [
                         "system_instruction" => ["parts" => [["text" => $systemInstruction]]],
                         "contents" => [["role" => "user", "parts" => [["text" => $promptText]]]]

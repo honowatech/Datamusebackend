@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ProjectRole;
 use Database\Factories\SurveyProjectFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -66,6 +67,28 @@ class SurveyProject extends Model
     public function submissions(): HasMany
     {
         return $this->hasMany(Submission::class, 'project_id');
+    }
+
+    /**
+     * Compteurs exposés par ProjectResource : membres actifs et questionnaires (non supprimés).
+     */
+    public function scopeWithCounts(Builder $query): Builder
+    {
+        return $query->withCount(self::countRelations());
+    }
+
+    public function loadCounts(): static
+    {
+        return $this->loadCount(self::countRelations());
+    }
+
+    /** @return array<string, \Closure> */
+    private static function countRelations(): array
+    {
+        return [
+            'members' => fn (Builder $q) => $q->where('status', ProjectMember::STATUS_ACTIVE),
+            'surveys' => fn (Builder $q) => $q,
+        ];
     }
 
     /**

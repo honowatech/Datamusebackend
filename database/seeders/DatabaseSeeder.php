@@ -15,11 +15,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
+        // Utilisateur de test historique (idempotent).
+        User::query()->firstOr(fn () => User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
+        ]));
+
+        $this->call([
+            SystemPromptSeeder::class,
+            SurveyRolesSeeder::class,
         ]);
     }
 }

@@ -54,6 +54,9 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // URL publique du frontend Next.js (liens d'invitation, CORS). Module Enquêtes (B-02).
+    'frontend_url' => rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone
