@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\TargetDatabase;
 use App\Models\User;
+use App\Support\SqlIdentifier;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -74,24 +75,16 @@ class FileIngestionService
         $rawHeaders = array_keys($firstRow);
         $cleanHeaders = [];
         $headerMap = []; // rawHeader => cleanHeader
-        $headerCounts = [];
+        $taken = [];
 
         foreach ($rawHeaders as $idx => $raw) {
-            $rawClean = trim((string)$raw);
-            $clean = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $rawClean);
-            $clean = strtolower(preg_replace('/[^a-zA-Z0-9_]+/', '_', $clean));
-            $clean = trim($clean, '_');
+            $clean = SqlIdentifier::normalize((string)$raw);
 
             if (empty($clean) || is_numeric($clean[0])) {
                 $clean = 'col_' . ($idx + 1) . ($clean ? '_' . $clean : '');
             }
 
-            if (isset($headerCounts[$clean])) {
-                $headerCounts[$clean]++;
-                $clean = $clean . '_' . $headerCounts[$clean];
-            } else {
-                $headerCounts[$clean] = 1;
-            }
+            $clean = SqlIdentifier::unique($clean, $taken, PHP_INT_MAX);
 
             $cleanHeaders[] = $clean;
             $headerMap[$raw] = $clean;

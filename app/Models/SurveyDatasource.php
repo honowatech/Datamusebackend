@@ -24,6 +24,7 @@ class SurveyDatasource extends Model
         'dirty_since',
         'last_materialized_at',
         'row_count',
+        'last_duration_ms',
         'last_error',
     ];
 
@@ -41,6 +42,7 @@ class SurveyDatasource extends Model
             'dirty_since' => 'datetime',
             'last_materialized_at' => 'datetime',
             'row_count' => 'integer',
+            'last_duration_ms' => 'integer',
         ];
     }
 
