@@ -8,6 +8,8 @@ use App\Http\Controllers\JobController;
 use App\Http\Controllers\Survey\InvitationController;
 use App\Http\Controllers\Survey\ProjectController;
 use App\Http\Controllers\Survey\ProjectMemberController;
+use App\Http\Controllers\Survey\SurveyController;
+use App\Http\Controllers\Survey\SurveyVersionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -74,8 +76,27 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/invitations/accept', [InvitationController::class, 'accept'])->name('invitations.accept');
 
     // ==== B-05 ==== Questionnaires, versions, assignations (SurveyController, SurveyVersionController)
-    // Route::get('/projects/{project}/surveys', ...); Route::post('/projects/{project}/surveys', ...);
-    // Route::get|put|delete('/surveys/{survey}', ...); versions, draft, validate, publish, fork, duplicate, assignments
+    Route::get('/projects/{project}/surveys', [SurveyController::class, 'index'])->whereNumber('project')->name('projects.surveys.index');
+    Route::post('/projects/{project}/surveys', [SurveyController::class, 'store'])->whereNumber('project')->name('projects.surveys.store');
+
+    // Réservé B-06b — routes fixes déclarées AVANT /surveys/{survey} (collision évitée aussi par whereNumber) :
+    // Route::post('/surveys/generate', [SurveyGenerateController::class, 'generate'])->middleware('throttle:ai')->name('surveys.generate');
+    // Route::post('/surveys/import/xlsform', [XlsFormController::class, 'import'])->name('surveys.import.xlsform');
+
+    Route::get('/surveys/{survey}', [SurveyController::class, 'show'])->whereNumber('survey')->name('surveys.show');
+    Route::put('/surveys/{survey}', [SurveyController::class, 'update'])->whereNumber('survey')->name('surveys.update');
+    Route::delete('/surveys/{survey}', [SurveyController::class, 'destroy'])->whereNumber('survey')->name('surveys.destroy');
+    Route::post('/surveys/{survey}/duplicate', [SurveyController::class, 'duplicate'])->whereNumber('survey')->name('surveys.duplicate');
+
+    Route::get('/surveys/{survey}/versions', [SurveyVersionController::class, 'index'])->whereNumber('survey')->name('surveys.versions.index');
+    Route::get('/surveys/{survey}/versions/{n}', [SurveyVersionController::class, 'show'])->whereNumber(['survey', 'n'])->name('surveys.versions.show');
+    Route::post('/surveys/{survey}/versions/{n}/fork', [SurveyVersionController::class, 'fork'])->whereNumber(['survey', 'n'])->name('surveys.versions.fork');
+    Route::put('/surveys/{survey}/draft', [SurveyVersionController::class, 'saveDraft'])->whereNumber('survey')->name('surveys.draft.save');
+    Route::post('/surveys/{survey}/validate', [SurveyVersionController::class, 'validateDraft'])->whereNumber('survey')->name('surveys.validate');
+    Route::post('/surveys/{survey}/publish', [SurveyVersionController::class, 'publish'])->whereNumber('survey')->name('surveys.publish');
+
+    Route::get('/surveys/{survey}/assignments', [SurveyVersionController::class, 'assignments'])->whereNumber('survey')->name('surveys.assignments.index');
+    Route::put('/surveys/{survey}/assignments', [SurveyVersionController::class, 'syncAssignments'])->whereNumber('survey')->name('surveys.assignments.sync');
 
     // ==== B-06 ==== Génération IA, XLSForm, traduction (throttle:ai sur les opérations IA)
     // Route::middleware('throttle:ai')->group(function () { /surveys/generate, /surveys/{survey}/ai/translate });
