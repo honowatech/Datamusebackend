@@ -17,6 +17,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Médias du module Enquêtes (B-07)
+    |--------------------------------------------------------------------------
+    |
+    | Disque privé recevant photos, signatures et audio des soumissions
+    | (`surveys/{survey}/submissions/{uuid}/{key}[_{i}].{ext}`). Les fichiers ne sont
+    | jamais servis directement : `GET /api/media/{id}` est une route signée temporaire.
+    | `survey_media_max_mb` borne la taille acceptée par l'endpoint d'envoi (413 au-delà).
+    |
+    */
+
+    'survey_media_disk' => env('SURVEY_MEDIA_DISK', 'local'),
+
+    'survey_media_max_mb' => (int) env('SURVEY_MEDIA_MAX_MB', 25),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |

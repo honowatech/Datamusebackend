@@ -21,6 +21,7 @@ class Device extends Model
         'user_id',
         'device_id',
         'platform',
+        'model',
         'app_version',
         'push_token',
         'last_seen_at',

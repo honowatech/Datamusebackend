@@ -5,11 +5,19 @@ use App\Http\Controllers\BusinessMetricController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\DatabaseConnectionController;
 use App\Http\Controllers\JobController;
+use App\Http\Controllers\Mobile\DeviceController;
+use App\Http\Controllers\Mobile\FormController;
+use App\Http\Controllers\Mobile\MediaUploadController;
+use App\Http\Controllers\Mobile\PingController;
+use App\Http\Controllers\Mobile\SubmissionStatusController;
+use App\Http\Controllers\Mobile\SubmissionSyncController;
 use App\Http\Controllers\Survey\InvitationController;
 use App\Http\Controllers\Survey\ProjectController;
 use App\Http\Controllers\Survey\ProjectMemberController;
 use App\Http\Controllers\Survey\SurveyController;
+use App\Http\Controllers\Survey\SurveyGenerateController;
 use App\Http\Controllers\Survey\SurveyVersionController;
+use App\Http\Controllers\Survey\SurveyXlsFormController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -79,9 +87,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/projects/{project}/surveys', [SurveyController::class, 'index'])->whereNumber('project')->name('projects.surveys.index');
     Route::post('/projects/{project}/surveys', [SurveyController::class, 'store'])->whereNumber('project')->name('projects.surveys.store');
 
-    // Réservé B-06b — routes fixes déclarées AVANT /surveys/{survey} (collision évitée aussi par whereNumber) :
-    // Route::post('/surveys/generate', [SurveyGenerateController::class, 'generate'])->middleware('throttle:ai')->name('surveys.generate');
-    // Route::post('/surveys/import/xlsform', [XlsFormController::class, 'import'])->name('surveys.import.xlsform');
+    // ==== B-06 ==== Routes fixes déclarées AVANT /surveys/{survey} (collision évitée aussi par whereNumber).
+    Route::post('/surveys/generate', [SurveyGenerateController::class, 'generate'])->middleware('throttle:ai')->name('surveys.generate');
+    Route::post('/surveys/import/xlsform', [SurveyXlsFormController::class, 'import'])->name('surveys.import.xlsform');
 
     Route::get('/surveys/{survey}', [SurveyController::class, 'show'])->whereNumber('survey')->name('surveys.show');
     Route::put('/surveys/{survey}', [SurveyController::class, 'update'])->whereNumber('survey')->name('surveys.update');
@@ -99,7 +107,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::put('/surveys/{survey}/assignments', [SurveyVersionController::class, 'syncAssignments'])->whereNumber('survey')->name('surveys.assignments.sync');
 
     // ==== B-06 ==== Génération IA, XLSForm, traduction (throttle:ai sur les opérations IA)
-    // Route::middleware('throttle:ai')->group(function () { /surveys/generate, /surveys/{survey}/ai/translate });
+    // `/surveys/generate` et `/surveys/import/xlsform` sont déclarées plus haut (avant `/surveys/{survey}`).
+    Route::get('/surveys/{survey}/export/xlsform', [SurveyXlsFormController::class, 'export'])->whereNumber('survey')->name('surveys.export.xlsform');
+    Route::post('/surveys/{survey}/ai/translate', [SurveyGenerateController::class, 'translate'])->whereNumber('survey')->middleware('throttle:ai')->name('surveys.ai.translate');
 
     // ==== B-10 ==== Soumissions web, export, stats, supervision
     // ==== B-11 ==== Verbatims, synthèse, rapports
@@ -107,16 +117,29 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 });
 
 // ==== B-07 ==== Synchronisation mobile : 600/min/utilisateur, meta.server_time + X-Server-Time sur chaque réponse
-// Route::get('/mobile/ping', PingController::class)->middleware('server.time'); // public, 204
+Route::get('/mobile/ping', PingController::class)->middleware(['server.time', 'throttle:mobile'])->name('mobile.ping'); // public, 204
 Route::prefix('mobile')->middleware(['server.time', 'auth:sanctum', 'throttle:mobile'])->group(function () {
-    // Route::post('/devices', ...); Route::get('/forms', ...); Route::get('/forms/{surveyId}', ...);
-    // Route::post('/submissions', ...); Route::post('/submissions/{uuid}/media/{questionKey}', ...);
-    // Route::get('/submissions/status', ...);
+    Route::post('/devices', [DeviceController::class, 'store'])->name('mobile.devices.store');
+
+    Route::get('/forms', [FormController::class, 'index'])->name('mobile.forms.index');
+    Route::get('/forms/{surveyId}', [FormController::class, 'show'])->whereNumber('surveyId')->name('mobile.forms.show');
+
+    // Route fixe déclarée AVANT /submissions/{uuid}/… (pas de collision : le segment est contraint par whereUuid).
+    Route::get('/submissions/status', [SubmissionStatusController::class, 'index'])->name('mobile.submissions.status');
+    Route::post('/submissions', [SubmissionSyncController::class, 'store'])->name('mobile.submissions.sync');
+    Route::post('/submissions/{uuid}/media/{questionKey}', [MediaUploadController::class, 'store'])
+        ->whereUuid('uuid')
+        ->where('questionKey', '[A-Za-z][A-Za-z0-9_]{0,39}')
+        ->name('mobile.submissions.media');
+
     // ==== B-08 ==== Route::get('/follow-ups/due', ...); Route::post('/follow-ups', ...);
 });
 
 // ==== B-07 ==== Médias : URL signée temporaire (Storage privé), nommée pour URL::temporarySignedRoute()
-// Route::get('/media/{media}', [MediaController::class, 'show'])->middleware('signed')->name('media.show');
+Route::get('/media/{media}', [MediaUploadController::class, 'show'])
+    ->whereNumber('media')
+    ->middleware('signed')
+    ->name('media.show');
 
 // ==== B-12 ==== Collecte publique : CORS ouvert (PublicCors, global sur api/public/*), limites par IP
 Route::prefix('public')->middleware(['public.cors'])->group(function () {

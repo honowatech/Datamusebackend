@@ -31,6 +31,9 @@ class Submission extends Model
 
     public const FLAG_CLOCK_SKEW = 'clock_skew';
 
+    /** Plafond de quota dépassé (`settings.quotas[].max`, B-07 SubmissionQualityService). */
+    public const FLAG_QUOTA_EXCEEDED = 'quota_exceeded';
+
     /** @var list<string> */
     public const FLAGS = [
         self::FLAG_TOO_FAST,
@@ -39,6 +42,7 @@ class Submission extends Model
         self::FLAG_GPS_MISSING,
         self::FLAG_GPS_OUTSIDE_ZONE,
         self::FLAG_CLOCK_SKEW,
+        self::FLAG_QUOTA_EXCEEDED,
     ];
 
     protected $fillable = [
