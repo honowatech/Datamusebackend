@@ -29,6 +29,7 @@ class AiJob extends Model
         'message',
         'input',
         'result_ref',
+        'output',
         'error',
         'started_at',
         'finished_at',
@@ -46,6 +47,7 @@ class AiJob extends Model
             'status' => JobStatus::class,
             'progress' => 'integer',
             'input' => 'array',
+            'output' => 'array',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
         ];
@@ -106,12 +108,13 @@ class AiJob extends Model
         return $this;
     }
 
-    public function markDone(?string $resultRef = null, ?string $message = null): static
+    public function markDone(?string $resultRef = null, ?string $message = null, ?array $output = null): static
     {
         $this->forceFill([
             'status' => JobStatus::Done,
             'progress' => 100,
             'result_ref' => $resultRef ?? $this->result_ref,
+            'output' => $output ?? $this->output,
             'message' => $message ?? $this->message,
             'finished_at' => now(),
         ])->save();

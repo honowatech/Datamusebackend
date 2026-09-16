@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\JobStatus;
 use App\Http\Resources\JobResource;
 use App\Models\AiJob;
 use App\Policies\Concerns\ChecksProjectRole;
@@ -25,6 +26,13 @@ class JobController extends ApiController
             || ($job->survey !== null && $this->isMember($user, $job->survey->project_id));
 
         abort_unless($allowed, 403, "Cette action n'est pas autorisée.");
+
+        // `Job.result` : résultat embarqué, uniquement lorsque le job a réussi (B-06b). Selon le job :
+        // proposition DFS `{definition, warnings}`, ou `{survey_id, version, revision, warnings}`.
+        // Attribut transient (aucune colonne `result` : la valeur vient de `ai_jobs.output`).
+        if ($job->status === JobStatus::Done && is_array($job->output)) {
+            $job->setAttribute('result', $job->output);
+        }
 
         return $this->ok(new JobResource($job));
     }
