@@ -4,6 +4,7 @@ namespace App\Services\Survey;
 
 use App\Enums\FollowUpStatus;
 use App\Enums\SurveyStatus;
+use App\Jobs\MaterializeSurveyDatasourceJob;
 use App\Models\FollowUpEntry;
 use App\Models\Submission;
 use App\Models\Survey;
@@ -430,6 +431,9 @@ class FollowUpService
         });
 
         $this->reevaluate($parent, $version);
+
+        // B-09b : les colonnes `{stage}_statut` / `{stage}_date` de `reponses` doivent suivre.
+        MaterializeSurveyDatasourceJob::refresh($parent->survey_id);
 
         return FollowUpSyncResult::stored($uuid, $mode, $entry->refresh(), $parentUuid);
     }

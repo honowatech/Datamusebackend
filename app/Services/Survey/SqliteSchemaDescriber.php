@@ -73,4 +73,29 @@ class SqliteSchemaDescriber
             'table_counts' => $tableCounts,
         ];
     }
+
+    /**
+     * Noms des tables d'un fichier SQLite, sans lire leur contenu (`Datasource.tables` du contrat).
+     * Un fichier absent ou illisible renvoie une liste vide : l'état de la datasource reste affichable.
+     *
+     * @return list<string>
+     */
+    public function tables(?string $sqlitePath): array
+    {
+        if ($sqlitePath === null || ! is_file($sqlitePath)) {
+            return [];
+        }
+
+        try {
+            $pdo = new PDO('sqlite:'.$sqlitePath);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $pdo->exec('PRAGMA query_only = 1;');
+
+            return array_values($pdo
+                ->query("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY rowid")
+                ->fetchAll(PDO::FETCH_COLUMN));
+        } catch (Throwable) {
+            return [];
+        }
+    }
 }

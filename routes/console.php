@@ -18,3 +18,7 @@ Artisan::command('inspire', function () {
 
 // ==== B-08 ==== Suivis échus : réévaluation de `relevant` puis passage en « manqué ».
 Schedule::command('follow-ups:mark-missed')->hourly()->withoutOverlapping();
+
+// ==== B-09b ==== Filet de sécurité de la matérialisation événementielle et purge des fichiers.
+Schedule::command('surveys:materialize-dirty')->everyFiveMinutes()->withoutOverlapping();
+Schedule::command('datasources:cleanup-old-files')->daily()->withoutOverlapping();

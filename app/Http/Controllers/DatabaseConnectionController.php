@@ -15,8 +15,11 @@ class DatabaseConnectionController extends Controller
      */
     public function index(Request $request)
     {
-        $databases = $request->user()->targetDatabases()
+        // Bases propres + sources matérialisées des enquêtes supervisées (module Enquêtes, B-09b).
+        $databases = TargetDatabase::query()
+            ->accessibleBy($request->user())
             ->select('id', 'name', 'driver', 'host', 'port', 'database', 'username', 'created_at')
+            ->orderBy('id')
             ->get();
 
         return response()->json([
@@ -44,8 +47,8 @@ class DatabaseConnectionController extends Controller
         try {
             $dbCreds = null;
             if ($request->database_id) {
-                // Connect using an existing database configuration
-                $dbConfig = $request->user()->targetDatabases()->findOrFail($request->database_id);
+                // Connect using an existing database configuration (owned or supervised survey source)
+                $dbConfig = TargetDatabase::query()->accessibleBy($request->user())->findOrFail($request->database_id);
                 $dbCreds = [
                     'driver' => $dbConfig->driver ?? 'mysql',
                     'host' => $dbConfig->host,

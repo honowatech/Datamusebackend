@@ -12,6 +12,7 @@ use App\Http\Controllers\Mobile\MediaUploadController;
 use App\Http\Controllers\Mobile\PingController;
 use App\Http\Controllers\Mobile\SubmissionStatusController;
 use App\Http\Controllers\Mobile\SubmissionSyncController;
+use App\Http\Controllers\Survey\DatasourceController;
 use App\Http\Controllers\Survey\InvitationController;
 use App\Http\Controllers\Survey\ProjectController;
 use App\Http\Controllers\Survey\ProjectMemberController;
@@ -111,6 +112,10 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // `/surveys/generate` et `/surveys/import/xlsform` sont déclarées plus haut (avant `/surveys/{survey}`).
     Route::get('/surveys/{survey}/export/xlsform', [SurveyXlsFormController::class, 'export'])->whereNumber('survey')->name('surveys.export.xlsform');
     Route::post('/surveys/{survey}/ai/translate', [SurveyGenerateController::class, 'translate'])->whereNumber('survey')->middleware('throttle:ai')->name('surveys.ai.translate');
+
+    // ==== B-09b ==== Source de données matérialisée (SQLite « TargetDatabase »)
+    Route::get('/surveys/{survey}/datasource', [DatasourceController::class, 'show'])->whereNumber('survey')->name('surveys.datasource.show');
+    Route::post('/surveys/{survey}/datasource/rebuild', [DatasourceController::class, 'rebuild'])->whereNumber('survey')->name('surveys.datasource.rebuild');
 
     // ==== B-10 ==== Soumissions web, export, stats, supervision
     // ==== B-11 ==== Verbatims, synthèse, rapports

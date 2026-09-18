@@ -22,8 +22,9 @@ class ChatController extends Controller
      */
     private function connectTargetDb($databaseId, $user)
     {
-        // Ensure the connection belongs to the authenticated user
-        $dbConfig = $user->targetDatabases()->findOrFail($databaseId);
+        // Ensure the connection is reachable by the authenticated user: owned, or the materialized
+        // datasource of a survey he supervises (module Enquêtes, B-09b).
+        $dbConfig = TargetDatabase::query()->accessibleBy($user)->findOrFail($databaseId);
 
         if ($dbConfig->driver === 'sqlite') {
             Config::set('database.connections.target_db', [
@@ -70,8 +71,8 @@ class ChatController extends Controller
         $user = $request->user();
         
         try {
-            // Authorization check
-            $dbConfig = $user->targetDatabases()->findOrFail($request->database_id);
+            // Authorization check (propriétaire ou source d'enquête supervisée, B-09b)
+            $dbConfig = TargetDatabase::query()->accessibleBy($user)->findOrFail($request->database_id);
             $driver = $dbConfig->driver ?? 'mysql';
 
             $provider = $request->provider ?? 'gemini';
