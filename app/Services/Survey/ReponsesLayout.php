@@ -577,6 +577,78 @@ final class ReponsesLayout
     }
 
     /**
+     * Colonnes issues de questions marquées `tags: ["pii"]` — retirées de l'export sans `include_pii`
+     * (B-10) et des définitions servies aux liens publics (B-12).
+     *
+     * @return list<string>
+     */
+    public function piiColumns(): array
+    {
+        $this->finalize();
+
+        $out = [];
+        $collect = function (array $binding) use (&$out): void {
+            $entry = $this->entries[$binding['entry']] ?? null;
+            if ($entry === null || ! self::isPii(is_array($entry['def'] ?? null) ? $entry['def'] : [])) {
+                return;
+            }
+            foreach ($binding['cols'] as $name) {
+                $out[$name] = true;
+            }
+        };
+
+        foreach ($this->baseBindings as $binding) {
+            $collect($binding);
+        }
+        foreach ($this->repeats as $rep) {
+            foreach ($rep['per_instance'] as $bindings) {
+                foreach ($bindings as $binding) {
+                    $collect($binding);
+                }
+            }
+        }
+        foreach ($this->stages as $stage) {
+            foreach ($stage['bindings'] as $binding) {
+                $collect($binding);
+            }
+        }
+
+        return array_keys($out);
+    }
+
+    /**
+     * Clés des questions marquées `pii` (toutes versions fusionnées).
+     *
+     * @return list<string>
+     */
+    public function piiKeys(): array
+    {
+        $out = [];
+        foreach ($this->entries as $entry) {
+            if (self::isPii(is_array($entry['def'] ?? null) ? $entry['def'] : [])) {
+                $out[] = $entry['key'];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Une définition de question porte-t-elle le tag `$tag` (`pii`, `enumerator_only`) ?
+     *
+     * @param  array<string, mixed>  $def
+     */
+    public static function isPii(array $def, string $tag = 'pii'): bool
+    {
+        $tags = $def['tags'] ?? null;
+
+        return is_array($tags) && in_array($tag, array_map(
+            fn ($t) => is_string($t) ? $t : '',
+            $tags,
+        ), true);
+    }
+
+    /**
      * @return array<string, array{table: string, columns: array<string, string>, instances: int}>
      */
     public function repeatTables(): array

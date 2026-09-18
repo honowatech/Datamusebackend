@@ -11,6 +11,9 @@ enum JobKind: string
     case Materialize = 'materialize';
     case Translate = 'translate';
 
+    /** B-10 — recalcul des drapeaux qualité (`POST /surveys/{id}/supervision/recompute`). */
+    case RecomputeFlags = 'recompute_flags';
+
     /** @return list<string> */
     public static function values(): array
     {

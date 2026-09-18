@@ -126,6 +126,170 @@ class SubmissionQualityService
         return max(0, min(100, $total));
     }
 
+    // ------------------------------------------------------------------ explications (B-10)
+
+    /**
+     * Explication lisible de chaque drapeau porté par la soumission (schéma `FlaggedSubmission.flag_details`).
+     *
+     * @param  array<string, mixed>|null  $settings
+     * @return list<array{flag: string, message: string, score: int}>
+     */
+    public function flagDetails(Submission $submission, ?array $settings = null): array
+    {
+        $settings ??= $this->settingsOf($submission);
+        $out = [];
+
+        foreach ($submission->flags ?? [] as $flag) {
+            if (! is_string($flag)) {
+                continue;
+            }
+            $out[] = [
+                'flag' => $flag,
+                'message' => $this->explain($flag, $submission, $settings),
+                'score' => self::WEIGHTS[$flag] ?? 10,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     */
+    private function explain(string $flag, Submission $submission, array $settings): string
+    {
+        return match ($flag) {
+            Submission::FLAG_TOO_FAST => sprintf(
+                'Durée %s inférieure au minimum %s.',
+                self::humanDuration((int) ($submission->duration_seconds ?? 0)),
+                self::humanDuration((int) ($settings['timing']['min_duration_seconds'] ?? 0)),
+            ),
+            Submission::FLAG_DUPLICATE => $this->explainDuplicate($submission, $settings),
+            Submission::FLAG_OFF_HOURS => sprintf(
+                'Entretien démarré à %s, hors de la plage %02dh-%02dh.',
+                $this->localStart($submission)->format('H\hi'),
+                self::OFF_HOURS_START,
+                self::OFF_HOURS_END,
+            ),
+            Submission::FLAG_GPS_MISSING => 'Aucune position GPS reçue alors que la capture est obligatoire.',
+            Submission::FLAG_GPS_OUTSIDE_ZONE => sprintf('Position relevée hors de la zone « %s ».', (string) ($submission->zone ?? '—')),
+            Submission::FLAG_CLOCK_SKEW => sprintf(
+                "Horloge de l'appareil décalée de %s.",
+                self::humanDuration((int) round(abs((int) $submission->device_time_offset_ms) / 1000)),
+            ),
+            Submission::FLAG_QUOTA_EXCEEDED => $this->explainQuota($submission, $settings),
+            default => $flag,
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     */
+    private function explainDuplicate(Submission $submission, array $settings): string
+    {
+        $keys = array_values(array_filter((array) ($settings['duplicate_keys'] ?? []), 'is_string'));
+        $twin = $this->duplicateOf($submission, $settings);
+        $suffix = $twin !== null ? sprintf(' (fiche #%d)', $twin) : '';
+
+        return $keys === []
+            ? 'Réponses identiques à une autre fiche de cette enquête'.$suffix.'.'
+            : sprintf('Mêmes valeurs sur %s qu\'une autre fiche%s.', implode(', ', $keys), $suffix);
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     */
+    private function explainQuota(Submission $submission, array $settings): string
+    {
+        foreach ((array) ($settings['quotas'] ?? []) as $quota) {
+            if (! is_array($quota) || ! (bool) ($quota['max'] ?? false)) {
+                continue;
+            }
+            $target = (int) ($quota['target'] ?? 0);
+            if ($target <= 0 || ! $this->quotaApplies($quota, $submission)) {
+                continue;
+            }
+            $count = $this->quotaCount($quota, $submission);
+            if ($count > $target) {
+                return sprintf(
+                    'Plafond « %s » dépassé (%d fiches pour un maximum de %d).',
+                    $this->labelOf($quota, (string) ($settings['default_language'] ?? 'fr')),
+                    $count,
+                    $target,
+                );
+            }
+        }
+
+        return 'Un plafond de quota est dépassé.';
+    }
+
+    /**
+     * Identifiant de la soumission jumelle (drapeau `duplicate`), ou null.
+     *
+     * @param  array<string, mixed>|null  $settings
+     */
+    public function duplicateOf(Submission $submission, ?array $settings = null): ?int
+    {
+        $settings ??= $this->settingsOf($submission);
+        $answers = is_array($submission->answers) ? $submission->answers : [];
+
+        if ($submission->answers_hash !== null) {
+            $twin = Submission::query()
+                ->where('survey_id', $submission->survey_id)
+                ->where('answers_hash', $submission->answers_hash)
+                ->when($submission->id !== null, fn ($q) => $q->where('id', '!=', $submission->id))
+                ->value('id');
+            if ($twin !== null) {
+                return (int) $twin;
+            }
+        }
+
+        $keys = array_values(array_filter((array) ($settings['duplicate_keys'] ?? []), 'is_string'));
+        if ($keys === []) {
+            return null;
+        }
+        $values = [];
+        foreach ($keys as $key) {
+            $value = $answers[$key] ?? null;
+            if (LogicEvaluator::isEmpty($value)) {
+                return null;
+            }
+            $values[$key] = self::normalizeValue($value);
+        }
+
+        $candidates = Submission::query()
+            ->where('survey_id', $submission->survey_id)
+            ->when($submission->id !== null, fn ($q) => $q->where('id', '!=', $submission->id))
+            ->whereNotIn('status', [SubmissionStatus::Rejected->value])
+            ->get(['id', 'answers']);
+
+        foreach ($candidates as $candidate) {
+            $other = is_array($candidate->answers) ? $candidate->answers : [];
+            $match = true;
+            foreach ($values as $key => $value) {
+                if (self::normalizeValue($other[$key] ?? null) !== $value) {
+                    $match = false;
+                    break;
+                }
+            }
+            if ($match) {
+                return (int) $candidate->id;
+            }
+        }
+
+        return null;
+    }
+
+    /** `754` → « 12 min 34 s ». */
+    public static function humanDuration(int $seconds): string
+    {
+        $seconds = max(0, $seconds);
+        $minutes = intdiv($seconds, 60);
+        $rest = $seconds % 60;
+
+        return $minutes === 0 ? $rest.' s' : ($rest === 0 ? $minutes.' min' : $minutes.' min '.$rest.' s');
+    }
+
     // ------------------------------------------------------------------ règles
 
     /** @param array<string, mixed> $settings */

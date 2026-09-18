@@ -16,6 +16,10 @@ use App\Http\Controllers\Survey\DatasourceController;
 use App\Http\Controllers\Survey\InvitationController;
 use App\Http\Controllers\Survey\ProjectController;
 use App\Http\Controllers\Survey\ProjectMemberController;
+use App\Http\Controllers\Survey\StatsController;
+use App\Http\Controllers\Survey\SubmissionController;
+use App\Http\Controllers\Survey\SubmissionExportController;
+use App\Http\Controllers\Survey\SupervisionController;
 use App\Http\Controllers\Survey\SurveyController;
 use App\Http\Controllers\Survey\SurveyGenerateController;
 use App\Http\Controllers\Survey\SurveyVersionController;
@@ -118,6 +122,24 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/surveys/{survey}/datasource/rebuild', [DatasourceController::class, 'rebuild'])->whereNumber('survey')->name('surveys.datasource.rebuild');
 
     // ==== B-10 ==== Soumissions web, export, stats, supervision
+    // Route fixe `/submissions/export` déclarée AVANT `/submissions` (pas de collision : segments distincts).
+    Route::get('/surveys/{survey}/submissions', [SubmissionController::class, 'index'])->whereNumber('survey')->name('surveys.submissions.index');
+    Route::get('/surveys/{survey}/submissions/export', SubmissionExportController::class)->whereNumber('survey')->name('surveys.submissions.export');
+    Route::get('/submissions/{submission}', [SubmissionController::class, 'show'])->whereNumber('submission')->name('submissions.show');
+    Route::patch('/submissions/{submission}', [SubmissionController::class, 'update'])->whereNumber('submission')->name('submissions.update');
+    Route::delete('/submissions/{submission}', [SubmissionController::class, 'destroy'])->whereNumber('submission')->name('submissions.destroy');
+
+    Route::get('/surveys/{survey}/stats/overview', [StatsController::class, 'overview'])->whereNumber('survey')->name('surveys.stats.overview');
+    Route::get('/surveys/{survey}/stats/questions', [StatsController::class, 'questions'])->whereNumber('survey')->name('surveys.stats.questions');
+    Route::get('/surveys/{survey}/stats/timeline', [StatsController::class, 'timeline'])->whereNumber('survey')->name('surveys.stats.timeline');
+    Route::get('/surveys/{survey}/stats/enumerators', [StatsController::class, 'enumerators'])->whereNumber('survey')->name('surveys.stats.enumerators');
+    Route::get('/surveys/{survey}/stats/zones', [StatsController::class, 'zones'])->whereNumber('survey')->name('surveys.stats.zones');
+    Route::get('/surveys/{survey}/stats/geo', [StatsController::class, 'geo'])->whereNumber('survey')->name('surveys.stats.geo');
+    Route::get('/surveys/{survey}/stats/crosstab', [StatsController::class, 'crosstab'])->whereNumber('survey')->name('surveys.stats.crosstab');
+
+    Route::get('/surveys/{survey}/supervision/flags', [SupervisionController::class, 'flags'])->whereNumber('survey')->name('surveys.supervision.flags');
+    Route::post('/surveys/{survey}/supervision/recompute', [SupervisionController::class, 'recompute'])->whereNumber('survey')->name('surveys.supervision.recompute');
+
     // ==== B-11 ==== Verbatims, synthèse, rapports
     // ==== B-12 ==== Gestion des liens publics (/surveys/{survey}/public-links)
 });
