@@ -367,6 +367,9 @@ final class DfsValidator
             $this->checkFicheCode($settings['fiche_code'], $nodes, $index);
         }
 
+        // 4 bis. Lien public + question `pii` obligatoire (B-13).
+        $this->checkPiiOnPublicLink($settings, $nodes);
+
         // 5. Sections, groupes, questions, étapes.
         foreach ($nodes as $pos => $node) {
             $p = $node['path'];
@@ -432,6 +435,49 @@ final class DfsValidator
      *
      * @param  array<string, mixed>  $def
      * @return array<int, array{kind: string, key: string, path: string, def: array<string, mixed>, stage: string|null, repeat: bool, companions: array<string, string>}>
+     */
+    /**
+     * B-13 — `settings.allow_public_link` vrai **et** une question `tags: ["pii"]` obligatoire.
+     *
+     * La définition servie au lien public retire les questions `pii` (`PublicDefinitionFilter`, B-12) mais
+     * le moteur valide toujours la version **publiée** : si une telle question est obligatoire et devient
+     * pertinente, toute soumission publique est rejetée. Avertissement (et non erreur) car la question
+     * peut rester hors du parcours réellement emprunté (`relevant` jamais vrai côté public).
+     *
+     * @param  array<string, mixed>  $settings
+     * @param  array<int, array<string, mixed>>  $nodes
+     */
+    private function checkPiiOnPublicLink(array $settings, array $nodes): void
+    {
+        if (($settings['allow_public_link'] ?? false) !== true) {
+            return;
+        }
+
+        foreach ($nodes as $node) {
+            // Les étapes de suivi ne sont jamais servies au canal public.
+            if ($node['kind'] !== 'question' || $node['stage'] !== null) {
+                continue;
+            }
+            $item = is_array($node['def']) ? $node['def'] : [];
+            $tags = is_array($item['tags'] ?? null) ? $item['tags'] : [];
+            if (! in_array('pii', $tags, true) || ($item['required'] ?? null) !== true) {
+                continue;
+            }
+
+            $this->warning(
+                $node['path'].'/required',
+                'pii_required_public',
+                "La question « {$node['key']} » est marquée `pii` et obligatoire alors que le lien public est activé : "
+                    .'elle est retirée de la définition publique, donc toute réponse publique où elle serait pertinente '
+                    .'serait rejetée. Rendez-la facultative, conditionnez sa pertinence au canal, ou désactivez '
+                    .'`settings.allow_public_link`.',
+            );
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $def
+     * @return array<int, array<string, mixed>>
      */
     private function collectNodes(array $def): array
     {

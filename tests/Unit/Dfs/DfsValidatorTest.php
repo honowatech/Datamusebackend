@@ -32,8 +32,58 @@ class DfsValidatorTest extends TestCase
 
         $this->assertTrue($result->isValid(), self::show($result->errors));
         $this->assertSame([], $result->errors);
-        // Sections C–H n'ont pas de traduction anglaise : avertissements seulement.
-        $this->assertSame(['missing_translation'], $result->warningCodes());
+        // Sections C–H n'ont pas de traduction anglaise ; `num_whatsapp` / `nom_compte_momo` sont `pii`
+        // et obligatoires alors que `allow_public_link` est vrai (B-13) : avertissements seulement.
+        $this->assertEqualsCanonicalizing(['missing_translation', 'pii_required_public'], $result->warningCodes());
+    }
+
+    public function test_a_required_pii_question_warns_when_the_public_link_is_allowed(): void
+    {
+        // `minimal.dfs.json` porte déjà `whatsapp` (pii, obligatoire) mais `allow_public_link` est faux.
+        $d = self::minimal();
+        $this->assertNotContains('pii_required_public', self::validator()->validate($d)->warningCodes());
+
+        $d['settings']['allow_public_link'] = true;
+        $d['sections'][0]['items'][0]['tags'] = ['pii'];
+        $d['sections'][0]['items'][0]['required'] = true;
+
+        $result = self::validator()->validate($d);
+
+        // Avertissement, jamais erreur : la question peut rester hors du parcours public.
+        $this->assertTrue($result->isValid(), self::show($result->errors));
+        $this->assertContains('pii_required_public', $result->warningCodes());
+        $warning = array_values(array_filter($result->warnings, static fn (array $w): bool => $w['code'] === 'pii_required_public'))[0];
+        $this->assertSame('/sections/0/items/0/required', $warning['path']);
+        $this->assertSame('warning', $warning['severity']);
+        $this->assertStringContainsString('lien public', $warning['message']);
+
+        // Lien public désactivé → plus d'avertissement.
+        $d['settings']['allow_public_link'] = false;
+        $this->assertNotContains('pii_required_public', self::validator()->validate($d)->warningCodes());
+
+        // Une seule question visée à la fois : `ville` (ajoutée ci-dessus) et `whatsapp` (déjà `pii`).
+        $this->assertCount(
+            2,
+            array_filter($result->warnings, static fn (array $w): bool => $w['code'] === 'pii_required_public'),
+        );
+
+        // Question facultative → plus d'avertissement pour elle.
+        $d['settings']['allow_public_link'] = true;
+        $d['sections'][0]['items'][0]['required'] = false;
+        $paths = array_column(array_filter(
+            self::validator()->validate($d)->warnings,
+            static fn (array $w): bool => $w['code'] === 'pii_required_public',
+        ), 'path');
+        $this->assertNotContains('/sections/0/items/0/required', $paths);
+
+        // Question `pii` obligatoire d'une étape de suivi : jamais servie au canal public.
+        $d['follow_up_stages'][0]['items'][0]['tags'] = ['pii'];
+        $this->assertSame(true, $d['follow_up_stages'][0]['items'][0]['required']);
+        $stagePaths = array_column(array_filter(
+            self::validator()->validate($d)->warnings,
+            static fn (array $w): bool => $w['code'] === 'pii_required_public',
+        ), 'path');
+        $this->assertNotContains('/follow_up_stages/0/items/0/required', $stagePaths);
     }
 
     public function test_minimal_example_is_valid(): void

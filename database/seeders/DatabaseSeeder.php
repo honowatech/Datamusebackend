@@ -24,6 +24,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
             SystemPromptSeeder::class,
             SurveyRolesSeeder::class,
+            // B-13 — démonstration MunaGo (projet, questionnaire publié, 60 soumissions, lien public,
+            // source de données matérialisée). Idempotent ; ignoré si `docs/fixtures/` est absent.
+            SurveyDemoSeeder::class,
         ]);
     }
 }
