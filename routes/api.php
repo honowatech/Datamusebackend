@@ -6,6 +6,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\DatabaseConnectionController;
 use App\Http\Controllers\JobController;
 use App\Http\Controllers\Mobile\DeviceController;
+use App\Http\Controllers\Mobile\FollowUpController;
 use App\Http\Controllers\Mobile\FormController;
 use App\Http\Controllers\Mobile\MediaUploadController;
 use App\Http\Controllers\Mobile\PingController;
@@ -132,7 +133,9 @@ Route::prefix('mobile')->middleware(['server.time', 'auth:sanctum', 'throttle:mo
         ->where('questionKey', '[A-Za-z][A-Za-z0-9_]{0,39}')
         ->name('mobile.submissions.media');
 
-    // ==== B-08 ==== Route::get('/follow-ups/due', ...); Route::post('/follow-ups', ...);
+    // ==== B-08 ==== Suivis longitudinaux (README DFS § 14)
+    Route::get('/follow-ups/due', [FollowUpController::class, 'index'])->name('mobile.followups.due');
+    Route::post('/follow-ups', [FollowUpController::class, 'store'])->name('mobile.followups.sync');
 });
 
 // ==== B-07 ==== Médias : URL signée temporaire (Storage privé), nommée pour URL::temporarySignedRoute()
