@@ -3,6 +3,7 @@
 namespace App\Services\Survey;
 
 use App\Exceptions\DfsInvalidDefinitionException;
+use App\Exceptions\ReportContentInvalidException;
 use App\Models\AiJob;
 use App\Models\SystemPrompt;
 use App\Services\Dfs\DfsDefaults;
@@ -52,6 +53,7 @@ class SurveyAiService
     public function __construct(
         private readonly LlmProviderService $llm,
         private readonly DfsValidator $validator,
+        private readonly ReportContentValidator $reportValidator = new ReportContentValidator,
     ) {}
 
     // ==================================================================== génération
@@ -194,12 +196,369 @@ class SurveyAiService
         return $this->validator->validate($definition);
     }
 
+    // ==================================================================== B-11 — verbatims
+
+    /**
+     * Construit un livre de codes à partir d'un échantillon de verbatims (prompt `verbatim_discover`).
+     *
+     * @param  list<string>  $texts
+     * @param  array{provider?: string, api_key: string, question_label?: string, max_themes?: int, language?: string}  $opts
+     * @return list<array<string, mixed>> thèmes normalisés (`VerbatimService::normalizeThemes`)
+     *
+     * @throws RuntimeException réponse illisible ou sans thème exploitable
+     */
+    public function discoverThemes(array $texts, array $opts): array
+    {
+        $max = max(2, min(VerbatimService::MAX_THEMES, (int) ($opts['max_themes'] ?? 10)));
+
+        $system = strtr($this->prompt('verbatim_discover'), [
+            '{question}' => (string) ($opts['question_label'] ?? 'Question ouverte'),
+            '{max_themes}' => (string) $max,
+            '{language}' => (string) ($opts['language'] ?? 'fr'),
+        ]);
+
+        $raw = $this->call($opts, $system, $this->numberedList($texts));
+        $rows = self::rowsOf(self::decodeJson($raw), ['themes', 'items', 'data', 'results']);
+
+        $themes = VerbatimService::normalizeThemes($rows, $max);
+        if ($themes === []) {
+            throw new RuntimeException('Le fournisseur IA n\'a renvoyé aucun thème exploitable.');
+        }
+
+        return $themes;
+    }
+
+    /**
+     * Classe un lot de verbatims sur un livre de codes (prompt `verbatim_classify`).
+     *
+     * @param  list<array{ref: int|string, text: string}>  $batch
+     * @param  list<array<string, mixed>>  $themes
+     * @param  array{provider?: string, api_key: string, question_label?: string, language?: string}  $opts
+     * @return array<string, array{themes: list<string>, sentiment: ?string, confidence: ?float}> ref → codage
+     */
+    public function classifyBatch(array $batch, array $themes, array $opts): array
+    {
+        $system = strtr($this->prompt('verbatim_classify'), [
+            '{question}' => (string) ($opts['question_label'] ?? 'Question ouverte'),
+            '{themes}' => $this->formatThemes($themes),
+            '{language}' => (string) ($opts['language'] ?? 'fr'),
+        ]);
+
+        $payload = json_encode(array_values(array_map(
+            static fn (array $item): array => ['ref' => $item['ref'], 'text' => $item['text']],
+            $batch,
+        )), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        $raw = $this->call($opts, $system, (string) $payload);
+        $rows = self::rowsOf(self::decodeJson($raw), ['codings', 'items', 'data', 'results']);
+
+        $out = [];
+        foreach ($rows as $row) {
+            if (! is_array($row) || ! isset($row['ref'])) {
+                continue;
+            }
+            $out[(string) $row['ref']] = [
+                'themes' => VerbatimService::themeKeysOf($row['themes'] ?? []),
+                'sentiment' => VerbatimService::sentiment($row['sentiment'] ?? null),
+                'confidence' => VerbatimService::confidence($row['confidence'] ?? null),
+            ];
+        }
+
+        return $out;
+    }
+
+    // ==================================================================== B-11 — synthèse
+
+    /**
+     * Synthèse markdown des résultats, construite depuis les **statistiques** (jamais les lignes brutes).
+     *
+     * @param  array{provider?: string, api_key: string, focus?: ?string, language?: string}  $opts
+     */
+    public function synthesize(string $contextMarkdown, array $opts): string
+    {
+        $focus = is_string($opts['focus'] ?? null) && trim($opts['focus']) !== ''
+            ? trim($opts['focus'])
+            : '(aucun angle particulier : synthèse générale)';
+
+        $system = strtr($this->prompt('survey_synthesis'), [
+            '{focus}' => $focus,
+            '{language}' => (string) ($opts['language'] ?? 'fr'),
+        ]);
+
+        $markdown = trim($this->call($opts, $system, $contextMarkdown, false));
+        if ($markdown === '') {
+            throw new RuntimeException('Le fournisseur IA a renvoyé une synthèse vide.');
+        }
+
+        return self::stripCodeFence($markdown);
+    }
+
+    // ==================================================================== B-11 — rapports
+
+    /**
+     * Rédige un rapport complet depuis un brief et le contexte statistique. La sortie est validée contre
+     * `ReportContent` ; en cas d'erreur, **une seule** tentative de réparation est faite (prompt
+     * `report_repair`, à défaut `commercial_report` avec la liste d'erreurs) puis l'appel échoue.
+     *
+     * @param  array{title: string, brief: string, orientation?: string, audience?: string, language?: string, tone?: string, length?: string, sections?: list<string>}  $brief
+     * @param  array{provider?: string, api_key: string}  $opts
+     * @return array<string, mixed> `content_json` valide
+     *
+     * @throws ReportContentInvalidException JSON toujours invalide après réparation
+     */
+    public function writeReport(string $contextMarkdown, array $brief, array $opts): array
+    {
+        $system = strtr($this->prompt('commercial_report'), $this->reportMarkers($brief));
+
+        $raw = $this->call($opts, $system, $this->briefMessage($brief, $contextMarkdown));
+        [$content, $errors] = $this->parseReport($raw);
+
+        if ($errors !== []) {
+            $repair = strtr($this->prompt('report_repair'), [
+                '{errors}' => ReportContentValidator::format($errors),
+                '{language}' => (string) ($brief['language'] ?? 'fr'),
+            ]);
+            $raw = $this->call($opts, $repair, "Document à corriger :\n\n".$raw);
+            [$content, $errors] = $this->parseReport($raw);
+        }
+
+        if ($errors !== []) {
+            throw new ReportContentInvalidException(
+                $errors,
+                'Le fournisseur IA a renvoyé un rapport invalide après une tentative de réparation : '
+                    .$this->firstMessages($errors),
+            );
+        }
+
+        return $content;
+    }
+
+    /**
+     * Réécrit **une** section (`ReportSection`) d'un rapport existant.
+     *
+     * @param  array<string, mixed>  $section  section actuelle
+     * @param  array{provider?: string, api_key: string, instructions?: ?string, language?: string, title?: string, brief?: string, audience?: string, tone?: string}  $opts
+     * @return array<string, mixed> section réécrite et validée
+     *
+     * @throws ReportContentInvalidException section invalide après réparation
+     */
+    public function regenerateSection(string $contextMarkdown, array $section, array $opts): array
+    {
+        $system = strtr($this->prompt('report_section'), [
+            '{heading}' => (string) ($section['heading'] ?? ''),
+            '{level}' => (string) ($section['level'] ?? 2),
+            '{instructions}' => is_string($opts['instructions'] ?? null) && trim($opts['instructions']) !== ''
+                ? trim($opts['instructions'])
+                : '(aucune consigne particulière : améliore la section en restant factuel)',
+            '{language}' => (string) ($opts['language'] ?? 'fr'),
+            '{title}' => (string) ($opts['title'] ?? ''),
+            '{audience}' => (string) ($opts['audience'] ?? 'Direction commerciale'),
+        ]);
+
+        $message = "SECTION ACTUELLE (JSON)\n".json_encode($section, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+            ."\n\nDONNÉES DE L'ENQUÊTE\n".$contextMarkdown;
+
+        $raw = $this->call($opts, $system, $message);
+        [$rewritten, $errors] = $this->parseSection($raw, $section);
+
+        if ($errors !== []) {
+            $repair = strtr($this->prompt('report_repair'), [
+                '{errors}' => ReportContentValidator::format($errors),
+                '{language}' => (string) ($opts['language'] ?? 'fr'),
+            ]);
+            $raw = $this->call($opts, $repair, "Section à corriger :\n\n".$raw);
+            [$rewritten, $errors] = $this->parseSection($raw, $section);
+        }
+
+        if ($errors !== []) {
+            throw new ReportContentInvalidException(
+                $errors,
+                'Le fournisseur IA a renvoyé une section invalide après une tentative de réparation : '
+                    .$this->firstMessages($errors),
+            );
+        }
+
+        return $rewritten;
+    }
+
+    /**
+     * Validation publique d'un `content_json` (utilisée par `PUT /reports/{id}`).
+     *
+     * @return list<array{path: string, code: string, message: string, severity: string}>
+     */
+    public function validateReportContent(mixed $content): array
+    {
+        return $this->reportValidator->validate($content);
+    }
+
+    // ------------------------------------------------------------------ interne — rapports
+
+    /**
+     * @return array{0: array<string, mixed>, 1: list<array{path: string, code: string, message: string, severity: string}>}
+     */
+    private function parseReport(string $raw): array
+    {
+        $decoded = self::decodeJson($raw);
+        if (is_array($decoded) && ! array_is_list($decoded) && isset($decoded['report']) && is_array($decoded['report'])) {
+            $decoded = $decoded['report'];
+        }
+
+        $errors = $this->reportValidator->validate($decoded);
+
+        return [is_array($decoded) ? $decoded : [], $errors];
+    }
+
+    /**
+     * Une section régénérée est validée en la replaçant dans un `ReportContent` minimal : les erreurs
+     * portent alors le chemin `/sections/0/...`, réécrit en chemin de section pour le prompt de réparation.
+     *
+     * @param  array<string, mixed>  $current
+     * @return array{0: array<string, mixed>, 1: list<array{path: string, code: string, message: string, severity: string}>}
+     */
+    private function parseSection(string $raw, array $current): array
+    {
+        $decoded = self::decodeJson($raw);
+        if (is_array($decoded) && ! array_is_list($decoded) && isset($decoded['section']) && is_array($decoded['section'])) {
+            $decoded = $decoded['section'];
+        }
+        if (! is_array($decoded) || array_is_list($decoded)) {
+            return [[], [[
+                'path' => '/',
+                'code' => 'invalid_json',
+                'message' => 'La réponse du modèle n\'est pas un objet JSON de section.',
+                'severity' => 'error',
+            ]]];
+        }
+
+        // Le titre et le niveau restent ceux de la section remplacée (le contrat remplace *cette* section).
+        $decoded['heading'] = $current['heading'] ?? ($decoded['heading'] ?? '');
+        $decoded['level'] = $current['level'] ?? ($decoded['level'] ?? 2);
+
+        $errors = $this->reportValidator->validate([
+            'title' => 'contrôle',
+            'summary' => 'contrôle',
+            'sections' => [$decoded],
+            'recommendations' => [],
+        ]);
+        $errors = array_values(array_filter(
+            $errors,
+            static fn (array $e): bool => str_starts_with((string) $e['path'], '/sections/0'),
+        ));
+        foreach ($errors as $i => $error) {
+            $errors[$i]['path'] = '/'.ltrim(substr((string) $error['path'], strlen('/sections/0')), '/');
+        }
+
+        return [$decoded, $errors];
+    }
+
+    /**
+     * @param  array<string, mixed>  $brief
+     * @return array<string, string>
+     */
+    private function reportMarkers(array $brief): array
+    {
+        $sections = array_values(array_filter(
+            is_array($brief['sections'] ?? null) ? $brief['sections'] : [],
+            static fn ($s): bool => is_string($s) && trim($s) !== '',
+        ));
+
+        return [
+            '{orientation}' => (string) ($brief['orientation'] ?? 'commercial'),
+            '{audience}' => (string) ($brief['audience'] ?? 'Direction commerciale'),
+            '{language}' => (string) ($brief['language'] ?? 'fr'),
+            '{tone}' => (string) ($brief['tone'] ?? 'factuel'),
+            '{length}' => (string) ($brief['length'] ?? 'moyen'),
+            '{sections}' => $sections === []
+                ? '(aucun plan imposé : propose un plan adapté au brief, 4 à 7 sections)'
+                : implode("\n", array_map(static fn (string $s): string => '- '.$s, $sections)),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $brief
+     */
+    private function briefMessage(array $brief, string $contextMarkdown): string
+    {
+        return "TITRE DU RAPPORT\n".trim((string) ($brief['title'] ?? ''))
+            ."\n\nBRIEF\n".trim((string) ($brief['brief'] ?? ''))
+            ."\n\nDONNÉES DE L'ENQUÊTE (seule source de chiffres autorisée)\n".$contextMarkdown;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $themes
+     */
+    private function formatThemes(array $themes): string
+    {
+        $lines = [];
+        foreach ($themes as $theme) {
+            if (! is_array($theme) || ! is_string($theme['key'] ?? null)) {
+                continue;
+            }
+            $line = '- `'.$theme['key'].'` — '.(string) ($theme['label'] ?? $theme['key']);
+            if (is_string($theme['description'] ?? null) && $theme['description'] !== '') {
+                $line .= ' : '.$theme['description'];
+            }
+            $lines[] = $line;
+        }
+
+        return $lines === [] ? '(aucun thème)' : implode("\n", $lines);
+    }
+
+    /**
+     * @param  list<string>  $texts
+     */
+    private function numberedList(array $texts): string
+    {
+        $lines = [];
+        foreach (array_values($texts) as $i => $text) {
+            $lines[] = ($i + 1).'. '.str_replace("\n", ' ', trim($text));
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * Tolère `[...]`, `{"themes": [...]}`, `{"items": [...]}`…
+     *
+     * @param  array<mixed>|null  $decoded
+     * @param  list<string>  $wrappers
+     * @return list<mixed>
+     */
+    private static function rowsOf(?array $decoded, array $wrappers): array
+    {
+        if ($decoded === null) {
+            throw new RuntimeException('Le fournisseur IA a renvoyé une réponse illisible (JSON invalide).');
+        }
+        if (array_is_list($decoded)) {
+            return $decoded;
+        }
+        foreach ($wrappers as $wrapper) {
+            if (isset($decoded[$wrapper]) && is_array($decoded[$wrapper]) && array_is_list($decoded[$wrapper])) {
+                return $decoded[$wrapper];
+            }
+        }
+
+        return [];
+    }
+
+    private static function stripCodeFence(string $text): string
+    {
+        $text = trim($text);
+        if (! str_starts_with($text, '```')) {
+            return $text;
+        }
+        $text = (string) preg_replace('/^```[a-zA-Z]*\s*/', '', $text);
+
+        return trim((string) preg_replace('/\s*```\s*$/', '', $text));
+    }
+
     // ==================================================================== interne — LLM
 
     /**
      * @param  array{provider?: string, api_key: string}  $opts
+     * @param  bool  $jsonMode  `false` pour une réponse markdown libre (synthèse)
      */
-    private function call(array $opts, string $system, string $userMessage): string
+    private function call(array $opts, string $system, string $userMessage, bool $jsonMode = true): string
     {
         $provider = ApiKeyResolver::normalizeProvider($opts['provider'] ?? null);
         $apiKey = (string) ($opts['api_key'] ?? '');
@@ -212,7 +571,7 @@ class SurveyAiService
             $apiKey,
             [['role' => 'user', 'content' => $userMessage]],
             $system,
-            ['json_mode' => true, 'temperature' => self::TEMPERATURE, 'timeout' => self::TIMEOUT],
+            ['json_mode' => $jsonMode, 'temperature' => self::TEMPERATURE, 'timeout' => self::TIMEOUT],
         );
 
         if (trim($text) === '') {

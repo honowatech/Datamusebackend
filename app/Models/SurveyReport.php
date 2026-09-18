@@ -26,11 +26,15 @@ class SurveyReport extends Model
         'audience',
         'language',
         'status',
+        'job_id',
         'provider',
         'model',
+        'error',
         'content_md',
         'content_json',
         'generated_files',
+        'options',
+        'meta',
         'tokens_used',
     ];
 
@@ -48,8 +52,44 @@ class SurveyReport extends Model
             'status' => JobStatus::class,
             'content_json' => 'array',
             'generated_files' => 'array',
+            'options' => 'array',
+            'meta' => 'array',
             'tokens_used' => 'integer',
         ];
+    }
+
+    /**
+     * Option du `ReportIn` stockée dans `options` (`tone`, `length`, `sections`, `include_verbatims`).
+     */
+    public function option(string $key, mixed $default = null): mixed
+    {
+        $options = is_array($this->options) ? $this->options : [];
+
+        return $options[$key] ?? $default;
+    }
+
+    /**
+     * Fusionne des entrées dans `meta` (drapeau `content_json_stale`) sans écraser les autres.
+     *
+     * @param  array<string, mixed>  $values
+     */
+    public function mergeMeta(array $values): static
+    {
+        $this->meta = array_filter(
+            array_merge(is_array($this->meta) ? $this->meta : [], $values),
+            static fn ($v): bool => $v !== null,
+        );
+
+        return $this;
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function files(): array
+    {
+        return array_values(array_filter(
+            is_array($this->generated_files) ? $this->generated_files : [],
+            'is_array',
+        ));
     }
 
     public function survey(): BelongsTo

@@ -8,6 +8,10 @@ enum JobKind: string
     case Classify = 'classify';
     case Synthesis = 'synthesis';
     case Report = 'report';
+
+    /** B-11 — régénération d'une seule section d'un rapport (`POST /reports/{id}/regenerate-section`). */
+    case ReportSection = 'report_section';
+
     case Materialize = 'materialize';
     case Translate = 'translate';
 

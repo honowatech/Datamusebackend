@@ -18,6 +18,7 @@ use App\Http\Controllers\Survey\InvitationController;
 use App\Http\Controllers\Survey\ProjectController;
 use App\Http\Controllers\Survey\ProjectMemberController;
 use App\Http\Controllers\Survey\PublicLinkController;
+use App\Http\Controllers\Survey\ReportController;
 use App\Http\Controllers\Survey\StatsController;
 use App\Http\Controllers\Survey\SubmissionController;
 use App\Http\Controllers\Survey\SubmissionExportController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Survey\SurveyController;
 use App\Http\Controllers\Survey\SurveyGenerateController;
 use App\Http\Controllers\Survey\SurveyVersionController;
 use App\Http\Controllers\Survey\SurveyXlsFormController;
+use App\Http\Controllers\Survey\VerbatimController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -143,6 +145,33 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::post('/surveys/{survey}/supervision/recompute', [SupervisionController::class, 'recompute'])->whereNumber('survey')->name('surveys.supervision.recompute');
 
     // ==== B-11 ==== Verbatims, synthèse, rapports
+    // Les routes fixes `verbatims/classify` et `verbatims/codebooks` sont déclarées AVANT
+    // `verbatims/{questionKey}` (une question ne peut pas porter ces clés : validateur DFS).
+    Route::post('/surveys/{survey}/verbatims/classify', [VerbatimController::class, 'classify'])
+        ->whereNumber('survey')->middleware('throttle:ai')->name('surveys.verbatims.classify');
+    Route::get('/surveys/{survey}/verbatims/codebooks', [VerbatimController::class, 'codebooks'])
+        ->whereNumber('survey')->name('surveys.verbatims.codebooks.index');
+    Route::put('/surveys/{survey}/verbatims/codebooks', [VerbatimController::class, 'storeCodebook'])
+        ->whereNumber('survey')->name('surveys.verbatims.codebooks.store');
+    Route::get('/surveys/{survey}/verbatims/codebooks/{codebook}', [VerbatimController::class, 'showCodebook'])
+        ->whereNumber(['survey', 'codebook'])->name('surveys.verbatims.codebooks.show');
+    Route::put('/surveys/{survey}/verbatims/codebooks/{codebook}', [VerbatimController::class, 'updateCodebook'])
+        ->whereNumber(['survey', 'codebook'])->name('surveys.verbatims.codebooks.update');
+    Route::get('/surveys/{survey}/verbatims/{questionKey}', [VerbatimController::class, 'index'])
+        ->whereNumber('survey')->where('questionKey', '[A-Za-z][A-Za-z0-9_]{0,39}')->name('surveys.verbatims.index');
+
+    Route::post('/surveys/{survey}/synthesis', [ReportController::class, 'synthesis'])
+        ->whereNumber('survey')->middleware('throttle:ai')->name('surveys.synthesis');
+
+    Route::get('/surveys/{survey}/reports', [ReportController::class, 'index'])->whereNumber('survey')->name('surveys.reports.index');
+    Route::post('/surveys/{survey}/reports', [ReportController::class, 'store'])
+        ->whereNumber('survey')->middleware('throttle:ai')->name('surveys.reports.store');
+    Route::get('/reports/{report}', [ReportController::class, 'show'])->whereNumber('report')->name('reports.show');
+    Route::put('/reports/{report}', [ReportController::class, 'update'])->whereNumber('report')->name('reports.update');
+    Route::post('/reports/{report}/regenerate-section', [ReportController::class, 'regenerateSection'])
+        ->whereNumber('report')->middleware('throttle:ai')->name('reports.regenerate-section');
+    Route::post('/reports/{report}/files', [ReportController::class, 'storeFile'])->whereNumber('report')->name('reports.files.store');
+
     // ==== B-12 ==== Gestion des liens publics (/surveys/{survey}/public-links)
     Route::get('/surveys/{survey}/public-links', [PublicLinkController::class, 'index'])->whereNumber('survey')->name('surveys.public-links.index');
     Route::post('/surveys/{survey}/public-links', [PublicLinkController::class, 'store'])->whereNumber('survey')->name('surveys.public-links.store');
@@ -175,6 +204,12 @@ Route::get('/media/{media}', [MediaUploadController::class, 'show'])
     ->whereNumber('media')
     ->middleware('signed')
     ->name('media.show');
+
+// ==== B-11 ==== Fichiers archivés d'un rapport : URL signée temporaire (disque privé), hors Sanctum
+Route::get('/reports/{report}/files/{fileId}', [ReportController::class, 'downloadFile'])
+    ->whereNumber(['report', 'fileId'])
+    ->middleware('signed')
+    ->name('reports.files.show');
 
 // ==== B-12 ==== Collecte publique : CORS ouvert (PublicCors, global sur api/public/*), limites par IP
 Route::prefix('public')->middleware(['public.cors'])->group(function () {
