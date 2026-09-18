@@ -59,6 +59,16 @@ class MediaUploadController extends ApiController
             return $this->fail("Cette soumission n'est pas la vôtre.", 403);
         }
 
+        return $this->storeFor($request, $submission, $questionKey);
+    }
+
+    /**
+     * Cœur de l'envoi, **sans** contrôle d'accès : l'appelant a déjà établi sa légitimité
+     * (enquêteur propriétaire pour `store()`, lien public ouvert pour B-12).
+     */
+    public function storeFor(UploadMediaRequest $request, Submission $submission, string $questionKey): JsonResponse
+    {
+        $uuid = $submission->uuid;
         $repeatIndex = $request->repeatIndex();
         $sha256 = $request->sha256();
 

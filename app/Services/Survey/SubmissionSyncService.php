@@ -29,6 +29,10 @@ use Throwable;
  * public B-12 et la saisie web). Chaque élément du lot est traité dans sa **propre transaction** :
  * une soumission en erreur n'annule pas les autres, et la réponse HTTP reste `200`.
  *
+ * `$user` peut être **null** : c'est le canal `public` (B-12), où la légitimité vient du lien
+ * (`PublicLink::isOpen()`) et non d'une habilitation. La soumission est alors stockée sans
+ * `enumerator_id` ni `device_id`, et `_enumerator` vaut `null` dans les expressions.
+ *
  * Politique de conflit (plan § 5.3, docs/openapi/survey.yaml `syncSubmissions`) :
  *  - uuid en liste noire (`deleted_submissions`) → `duplicate` ;
  *  - uuid connu dont le serveur porte `validated` / `rejected` (revue web) → **serveur gagne**, `duplicate` ;
@@ -68,7 +72,7 @@ class SubmissionSyncService
      * @param  list<array<string, mixed>>  $payloads
      * @return list<SubmissionSyncResult>
      */
-    public function syncBatch(User $user, array $payloads, SubmissionChannel $channel = SubmissionChannel::Mobile): array
+    public function syncBatch(?User $user, array $payloads, SubmissionChannel $channel = SubmissionChannel::Mobile): array
     {
         $results = [];
         foreach ($payloads as $payload) {
@@ -84,7 +88,7 @@ class SubmissionSyncService
      *
      * @param  array<string, mixed>  $payload
      */
-    public function sync(User $user, array $payload, SubmissionChannel $channel = SubmissionChannel::Mobile): SubmissionSyncResult
+    public function sync(?User $user, array $payload, SubmissionChannel $channel = SubmissionChannel::Mobile): SubmissionSyncResult
     {
         $uuid = strtolower((string) ($payload['uuid'] ?? ''));
         if ($uuid === '') {
@@ -107,7 +111,7 @@ class SubmissionSyncService
     /**
      * @param  array<string, mixed>  $payload
      */
-    private function process(User $user, string $uuid, array $payload, SubmissionChannel $channel): SubmissionSyncResult
+    private function process(?User $user, string $uuid, array $payload, SubmissionChannel $channel): SubmissionSyncResult
     {
         // 1. uuid supprimé définitivement côté web : le mobile doit oublier sa copie locale.
         if (DeletedSubmission::has($uuid)) {
@@ -128,7 +132,8 @@ class SubmissionSyncService
         }
 
         // 2. Habilitation de collecte (enquêteur assigné, superviseur, analyste, admin).
-        if (! $user->can('collect', $survey)) {
+        //    `$user` null = canal public (B-12) : le lien a déjà été validé par le contrôleur.
+        if ($user !== null && ! $user->can('collect', $survey)) {
             return SubmissionSyncResult::conflict($uuid, SubmissionSyncResult::REASON_NOT_ASSIGNED, $existing);
         }
 
@@ -262,13 +267,13 @@ class SubmissionSyncService
      * @param  array<string, mixed>  $payload
      * @param  array<string, mixed>  $settings
      */
-    private function buildEngine(User $user, SurveyVersion $version, array $payload, array $settings): FormEngine
+    private function buildEngine(?User $user, SurveyVersion $version, array $payload, array $settings): FormEngine
     {
         $startedAt = (string) ($payload['started_at'] ?? '');
         $endedAt = (string) ($payload['ended_at'] ?? '');
 
         $ctx = new EngineContext(
-            enumeratorId: $user->id,
+            enumeratorId: $user?->id,
             deviceId: isset($payload['device_id']) && is_string($payload['device_id']) ? $payload['device_id'] : null,
             zone: isset($payload['zone']) && is_string($payload['zone']) ? $payload['zone'] : null,
             lang: isset($payload['language']) && is_string($payload['language']) ? $payload['language'] : null,
@@ -338,7 +343,7 @@ class SubmissionSyncService
      * @param  array<string, mixed>  $settings
      */
     private function store(
-        User $user,
+        ?User $user,
         Survey $survey,
         SurveyVersion $version,
         FormEngine $engine,
@@ -384,7 +389,7 @@ class SubmissionSyncService
                 'survey_id' => $survey->id,
                 'survey_version_id' => $version->id,
                 'project_id' => $survey->project_id,
-                'enumerator_id' => $user->id,
+                'enumerator_id' => $user?->id,
                 'device_id' => $device?->id,
                 'channel' => $channel,
                 'status' => $status,
@@ -524,9 +529,9 @@ class SubmissionSyncService
     /**
      * Appareil de l'utilisateur (créé à la volée si le mobile n'a pas encore appelé `/mobile/devices`).
      */
-    private function resolveDevice(User $user, mixed $deviceId): ?Device
+    private function resolveDevice(?User $user, mixed $deviceId): ?Device
     {
-        if (! is_string($deviceId) || $deviceId === '') {
+        if ($user === null || ! is_string($deviceId) || $deviceId === '') {
             return null;
         }
 

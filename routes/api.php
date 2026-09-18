@@ -12,10 +12,12 @@ use App\Http\Controllers\Mobile\MediaUploadController;
 use App\Http\Controllers\Mobile\PingController;
 use App\Http\Controllers\Mobile\SubmissionStatusController;
 use App\Http\Controllers\Mobile\SubmissionSyncController;
+use App\Http\Controllers\Public\PublicSurveyController;
 use App\Http\Controllers\Survey\DatasourceController;
 use App\Http\Controllers\Survey\InvitationController;
 use App\Http\Controllers\Survey\ProjectController;
 use App\Http\Controllers\Survey\ProjectMemberController;
+use App\Http\Controllers\Survey\PublicLinkController;
 use App\Http\Controllers\Survey\StatsController;
 use App\Http\Controllers\Survey\SubmissionController;
 use App\Http\Controllers\Survey\SubmissionExportController;
@@ -142,6 +144,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     // ==== B-11 ==== Verbatims, synthèse, rapports
     // ==== B-12 ==== Gestion des liens publics (/surveys/{survey}/public-links)
+    Route::get('/surveys/{survey}/public-links', [PublicLinkController::class, 'index'])->whereNumber('survey')->name('surveys.public-links.index');
+    Route::post('/surveys/{survey}/public-links', [PublicLinkController::class, 'store'])->whereNumber('survey')->name('surveys.public-links.store');
+    Route::delete('/surveys/{survey}/public-links/{linkId}', [PublicLinkController::class, 'destroy'])->whereNumber(['survey', 'linkId'])->name('surveys.public-links.destroy');
 });
 
 // ==== B-07 ==== Synchronisation mobile : 600/min/utilisateur, meta.server_time + X-Server-Time sur chaque réponse
@@ -174,10 +179,18 @@ Route::get('/media/{media}', [MediaUploadController::class, 'show'])
 // ==== B-12 ==== Collecte publique : CORS ouvert (PublicCors, global sur api/public/*), limites par IP
 Route::prefix('public')->middleware(['public.cors'])->group(function () {
     Route::middleware('throttle:public-read')->group(function () {
-        // Route::get('/surveys/{token}', ...);
+        Route::get('/surveys/{token}', [PublicSurveyController::class, 'show'])
+            ->where('token', '[A-Za-z0-9_-]{1,64}')
+            ->name('public.surveys.show');
     });
     Route::middleware('throttle:public-write')->group(function () {
-        // Route::post('/surveys/{token}/submissions', ...);
-        // Route::post('/surveys/{token}/submissions/{uuid}/media/{questionKey}', ...);
+        Route::post('/surveys/{token}/submissions', [PublicSurveyController::class, 'submit'])
+            ->where('token', '[A-Za-z0-9_-]{1,64}')
+            ->name('public.surveys.submit');
+        Route::post('/surveys/{token}/submissions/{uuid}/media/{questionKey}', [PublicSurveyController::class, 'media'])
+            ->where('token', '[A-Za-z0-9_-]{1,64}')
+            ->whereUuid('uuid')
+            ->where('questionKey', '[A-Za-z][A-Za-z0-9_]{0,39}')
+            ->name('public.surveys.media');
     });
 });
