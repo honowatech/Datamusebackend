@@ -1,0 +1,7 @@
+[
+  { "key": "budget_serre", "label": "4 000 FCFA, c'est un vrai arbitrage", "description": "Attribuer quand le parent dit que la somme pèse sur un budget déjà contraint.", "examples": ["Oui, c'est important, on est déjà serrés.", "Ce n'est pas rien. 4 000 c'est le sac de riz."] },
+  { "key": "depense_negligeable", "label": "Somme comparable à une dépense courante", "description": "Attribuer quand le parent relativise le montant en le comparant à une dépense banale du mois.", "examples": ["Non, ça va, c'est le prix d'un crédit de communication."] },
+  { "key": "arbitrage_securite", "label": "Accepterait pour la sécurité de l'enfant", "description": "Attribuer quand le parent subordonne explicitement la dépense à la sécurité de l'enfant.", "examples": ["Non, si c'est pour la sécurité de l'enfant on trouve."] },
+  { "key": "variable_selon_mois", "label": "Dépend des mois", "description": "Attribuer quand la réponse est conditionnelle ou hésitante, silence compris.", "examples": ["(silence, 4 secondes) Ça dépend des mois."] },
+  { "key": "repere_concret", "label": "Converti en repère du quotidien", "description": "Attribuer quand le parent traduit la somme en un poste de dépense concret (riz, école privée) pour la situer. Souvent combiné à budget_serre.", "examples": ["4 000 c'est le sac de riz.", "Vous savez, avec l'école privée, tout est important."] }
+]

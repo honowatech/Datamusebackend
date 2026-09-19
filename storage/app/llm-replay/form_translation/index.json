@@ -1,0 +1,17 @@
+{
+  "prompt": "form_translation",
+  "description": "Traduction des libellés d'un questionnaire. Le lot reçu est [{path, text}] ; la transformation `translation` renvoie les MÊMES `path` avec la traduction de la table `by_text` (texte source → texte cible), et recopie tel quel tout texte absent de la table. Traductions rédigées à la main — résultat SIMULÉ.",
+  "rules": [
+    {
+      "id": "fr-en",
+      "when": { "vars": { "target_lang": ["en", "en-gb", "en-us"] } },
+      "response": "fr-en.json",
+      "transform": "translation"
+    }
+  ],
+  "default": {
+    "comment": "Aucune autre paire de langues n'est couverte par le corpus : les textes reviennent inchangés, ce qui est visible dans le job (« n non traduit(s) »).",
+    "response": "fr-en.json",
+    "transform": "translation"
+  }
+}

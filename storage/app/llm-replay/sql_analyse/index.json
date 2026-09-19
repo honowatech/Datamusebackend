@@ -1,0 +1,8 @@
+{
+    "prompt": "sql_analyse",
+    "description": "Analyse statistique avancée (SQL + Python). Aucune des trois questions de démonstration ne relève de cette catégorie : le rejeu répond par un message explicite au lieu d inventer un script. Résultat SIMULÉ.",
+    "rules": [],
+    "default": {
+        "response": "hors-corpus.json"
+    }
+}

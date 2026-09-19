@@ -1,0 +1,11 @@
+{
+  "_comment": "Codage des verbatims réels de `d1_precision`. Rédigé à la main — résultat SIMULÉ.",
+  "fallback": { "themes": [], "sentiment": "neutral", "confidence": 0.2 },
+  "by_text": {
+    "Le chauffeur m'envoie un message quand ils sont arrivés.": { "themes": ["relais_adulte"], "sentiment": "neutral", "confidence": 0.93 },
+    "Ma sœur habite près de l'école, elle passe voir.": { "themes": ["relais_adulte"], "sentiment": "neutral", "confidence": 0.9 },
+    "J'appelle la maîtresse, elle a mon numéro.": { "themes": ["relais_adulte"], "sentiment": "neutral", "confidence": 0.92 },
+    "Je ne peux pas vérifier, je fais confiance.": { "themes": ["aucune_verification"], "sentiment": "neutral", "confidence": 0.95 },
+    "L'enfant a un petit téléphone, je l'appelle.": { "themes": ["appel_direct_enfant"], "sentiment": "neutral", "confidence": 0.95 }
+  }
+}

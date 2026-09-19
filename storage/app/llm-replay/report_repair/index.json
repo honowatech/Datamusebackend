@@ -1,0 +1,34 @@
+{
+  "prompt": "report_repair",
+  "description": "Correction d'un `ReportContent` (ou d'une section) refusé par ReportContentValidator. Particularité : le message reçu n'est plus le contexte statistique mais le DOCUMENT FAUTIF, qui porte déjà les vrais chiffres. Les motifs ci-dessous les relisent donc dans ce document, exactement comme un modèle qui « corrige seulement ce qui cause les erreurs et conserve les chiffres à l'identique ». La cellule supprimée par l'erreur `row_width` est remplacée par `null`, comme le prescrit le prompt. Résultat SIMULÉ.",
+  "figures": {
+    "n_total": ["(\\d+) fiches ont été collectées", "null"],
+    "n_valides": ["collectées à Douala, dont (\\d+) valides", "null"],
+    "n_hors_cible": ["valides et (\\d+) hors cible", "null"],
+    "taux_hors_cible": ["hors cible \\(([\\d.,]+) %", "null"],
+    "duree_mediane": ["entretien est de (\\d+) secondes", "null"],
+    "acompte_n": ["Taux d'acompte[^(]*\\((\\d+)", "null"],
+    "acompte_d": ["Taux d'acompte[^(]*\\(\\d+/(\\d+)\\)", "null"],
+    "taux_acompte": ["5 000 FCFA, soit ([\\d.,]+) %", "null"],
+    "oui_verbal_n": ["soit [\\d.,]+ %\\. (\\d+) autres ont dit oui", "null"],
+    "retrait_n": ["Retrait ≤ 7 j\", \"value\": \"(\\d+)", "null"],
+    "retrait_d": ["Retrait ≤ 7 j\", \"value\": \"\\d+/(\\d+)", "null"],
+    "prix_normal_n": ["C'est normal\",\\s*(\\d+)", "null"],
+    "prix_normal_pct": ["C'est normal\",\\s*\\d+,\\s*\"([\\d.,]+)", "null"],
+    "prix_acceptable_n": ["C'est cher mais acceptable\",\\s*(\\d+)", "null"],
+    "prix_trop_cher_n": ["C'est trop cher\",\\s*(\\d+)", "null"],
+    "prix_trop_cher_pct": ["C'est trop cher\",\\s*\\d+,\\s*\"([\\d.,]+)", "null"]
+  },
+  "rules": [
+    {
+      "id": "section-corrigee",
+      "comment": "Réparation d'une SECTION (`SurveyAiService::regenerateSection`). Le corpus de `report_section` étant toujours valide, ce cas n'est pas atteint en démonstration ; la règle existe pour que la chaîne ne casse pas.",
+      "when": { "vars": { "kind": "section" } },
+      "response": "munago.section-corrigee.json"
+    }
+  ],
+  "default": {
+    "comment": "Réparation d'un RAPPORT complet : version corrigée de la variante « demo-reparation ».",
+    "response": "munago.rapport-corrige.json"
+  }
+}

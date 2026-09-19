@@ -1,0 +1,8 @@
+{
+  "heading": "(imposé par le serveur)",
+  "level": 2,
+  "paragraphs": [
+    "Section corrigée : les propriétés non prévues par le contrat ont été retirées et les types rétablis, sans modifier un seul chiffre du texte reçu.",
+    "Sur {{acompte_d}} fiches valides, {{acompte_n}} personnes ont versé l'acompte de 5 000 FCFA, soit {{taux_acompte}} %."
+  ]
+}

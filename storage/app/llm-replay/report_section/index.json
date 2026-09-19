@@ -1,0 +1,304 @@
+{
+    "prompt": "report_section",
+    "description": "Réécriture d'une seule section d'un rapport. Le serveur impose `heading` et `level` : la réponse rejouée peut donc porter n'importe quel titre. Comme le rapport complet, le texte est rédigé à la main et tous les chiffres sont extraits du contexte statistique réellement reçu. Résultat SIMULÉ.",
+    "figures": {
+        "n_total": [
+            "Fiches exploitables : (\\d+)",
+            "null"
+        ],
+        "n_valides": [
+            "dont (\\d+) valides",
+            "null"
+        ],
+        "n_hors_cible": [
+            "valides, (\\d+) hors cible",
+            "null"
+        ],
+        "duree_mediane": [
+            "Durée médiane : (\\d+) s",
+            "null"
+        ],
+        "taux_acompte": [
+            "acompte / fiches valides : ([\\d.,]+) %",
+            "null"
+        ],
+        "acompte_n": [
+            "acompte / fiches valides : [^(]*\\((\\d+)",
+            "null"
+        ],
+        "acompte_d": [
+            "acompte / fiches valides : [^(]*\\(\\d+/(\\d+)\\)",
+            "null"
+        ],
+        "taux_retrait": [
+            "parmi les acomptes : ([\\d.,]+) %",
+            "null"
+        ],
+        "retrait_n": [
+            "parmi les acomptes : [^(]*\\((\\d+)",
+            "null"
+        ],
+        "retrait_d": [
+            "parmi les acomptes : [^(]*\\(\\d+/(\\d+)\\)",
+            "null"
+        ],
+        "taux_activation": [
+            "parmi les appareils retirés : ([\\d.,]+) %",
+            "null"
+        ],
+        "activation_n": [
+            "parmi les appareils retirés : [^(]*\\((\\d+)",
+            "null"
+        ],
+        "activation_d": [
+            "parmi les appareils retirés : [^(]*\\(\\d+/(\\d+)\\)",
+            "null"
+        ],
+        "taux_hors_cible": [
+            "hors cible / contacts : ([\\d.,]+) %",
+            "null"
+        ],
+        "quota_reseau": [
+            "Maximum 5 [^:]*: (\\d+)",
+            "null"
+        ],
+        "prix_rupture_mediane": [
+            "f2_prix_rupture[^#]*médiane ([\\d.]+)",
+            "null"
+        ],
+        "prix_rupture_n": [
+            "f2_prix_rupture., n = (\\d+)",
+            "null"
+        ],
+        "prix_normal_n": [
+            "C'est normal : (\\d+)",
+            "null"
+        ],
+        "prix_normal_pct": [
+            "C'est normal : \\d+ \\(([\\d.,]+) %\\)",
+            "null"
+        ],
+        "prix_acceptable_n": [
+            "C'est cher mais acceptable : (\\d+)",
+            "null"
+        ],
+        "prix_appareil_acceptable_pct": [
+            "C'est cher mais acceptable : \\d+ \\(([\\d.,]+) %\\)",
+            "null"
+        ],
+        "prix_trop_cher_n": [
+            "C'est trop cher : (\\d+)",
+            "null"
+        ],
+        "prix_appareil_trop_cher_pct": [
+            "C'est trop cher : \\d+ \\(([\\d.,]+) %\\)",
+            "null"
+        ],
+        "abo_2000_n": [
+            "2 000 FCFA/mois : (\\d+)",
+            "null"
+        ],
+        "abo_3000_n": [
+            "3 000 FCFA/mois : (\\d+)",
+            "null"
+        ],
+        "abo_4000_n": [
+            "4 000 FCFA/mois : (\\d+)",
+            "null"
+        ],
+        "abo_4500_n": [
+            "4 500 FCFA/mois : (\\d+)",
+            "null"
+        ],
+        "abo_5000_n": [
+            "5 000 FCFA/mois : (\\d+)",
+            "null"
+        ],
+        "abo_6000_n": [
+            "6 000 FCFA/mois ou plus : (\\d+)",
+            "null"
+        ],
+        "abo_autre_n": [
+            "Autre montant : (\\d+)",
+            "null"
+        ],
+        "option_a_n": [
+            "Option A[^:]*: (\\d+)",
+            "null"
+        ],
+        "option_a_pct": [
+            "Option A[^:]*: \\d+ \\(([\\d.,]+) %\\)",
+            "null"
+        ],
+        "dec_oui_acompte_n": [
+            "verse l'acompte maintenant : (\\d+)",
+            "null"
+        ],
+        "oui_verbal_n": [
+            "OUI verbal seulement[^:]*: (\\d+)",
+            "null"
+        ],
+        "oui_verbal_pct": [
+            "OUI verbal seulement[^:]*: \\d+ \\(([\\d.,]+) %\\)",
+            "null"
+        ],
+        "non_clair_n": [
+            "NON clair : (\\d+)",
+            "null"
+        ],
+        "hesite_non_n": [
+            "Hésite longtemps puis non : (\\d+)",
+            "null"
+        ],
+        "hesite_oui_n": [
+            "Hésite longtemps puis oui \\+ paiement : (\\d+)",
+            "null"
+        ],
+        "refus_argent_n": [
+            "Pas l'argent maintenant : (\\d+)",
+            "null"
+        ],
+        "refus_conjoint_n": [
+            "Doit en parler au conjoint : (\\d+)",
+            "null"
+        ],
+        "refus_produit_n": [
+            "Pas convaincu du produit : (\\d+)",
+            "null"
+        ],
+        "refus_plus_tard_n": [
+            "Pas le moment [^:]*: (\\d+)",
+            "null"
+        ],
+        "refus_prix_n": [
+            "Prix global trop élevé : (\\d+)",
+            "null"
+        ],
+        "refus_mefiance_n": [
+            "Méfiance acompte [^:]*: (\\d+)",
+            "null"
+        ],
+        "refus_deplacement_n": [
+            "Ne veut pas se déplacer : (\\d+)",
+            "null"
+        ],
+        "refus_loin_n": [
+            "Lieu de retrait trop loin : (\\d+)",
+            "null"
+        ],
+        "femmes_n": [
+            "Femme : (\\d+)",
+            "null"
+        ],
+        "femmes_pct": [
+            "Femme : \\d+ \\(([\\d.,]+) %\\)",
+            "null"
+        ],
+        "age_median": [
+            "age_approx., n = \\d+\\)\\n- moyenne [\\d.]+ · médiane ([\\d.]+)",
+            "null"
+        ],
+        "enfants_mediane": [
+            "nb_enfants_scolarises., n = \\d+\\)\\n- moyenne [\\d.]+ · médiane ([\\d.]+)",
+            "null"
+        ],
+        "momo_n": [
+            "MTN MoMo : (\\d+)",
+            "null"
+        ],
+        "om_n": [
+            "Orange Money : (\\d+)",
+            "null"
+        ],
+        "whatsapp_n": [
+            "q11b_canal_rappel., n = \\d+\\)\\n- WhatsApp : (\\d+)",
+            "null"
+        ],
+        "marque_inquiete_pct": [
+            "Ça m'inquiète [^:]*: \\d+ \\(([\\d.,]+) %\\)",
+            "null"
+        ],
+        "q12_non_securite_pct": [
+            "Non, si c'est pour sa sécurité : \\d+ \\(([\\d.,]+) %\\)",
+            "null"
+        ],
+        "q12_oui_beaucoup_pct": [
+            "Oui, beaucoup : \\d+ \\(([\\d.,]+) %\\)",
+            "null"
+        ],
+        "q6_codes": [
+            "q6_freins., (\\d+) codés",
+            "0"
+        ],
+        "frein_1_label": [
+            "q6_freins., \\d+ codés\\)\\n- \\*\\*([^*]+)\\*\\*",
+            "non classé"
+        ],
+        "frein_1_n": [
+            "q6_freins., \\d+ codés\\)\\n- \\*\\*[^*]+\\*\\* : (\\d+)",
+            "null"
+        ],
+        "frein_1_pct": [
+            "q6_freins., \\d+ codés\\)\\n- \\*\\*[^*]+\\*\\* : \\d+ \\(([\\d.,]+) %\\)",
+            "null"
+        ],
+        "frein_1_quote": [
+            "q6_freins., \\d+ codés\\)\\n- \\*\\*[^*]+\\*\\* : [^\\n]*\\n  > ([^\\n]+)",
+            "(aucun verbatim codé pour cette question)"
+        ],
+        "frein_2_label": [
+            "q6_freins., \\d+ codés\\)\\n(?:- \\*\\*[^*]+\\*\\* :[^\\n]*\\n(?:  > [^\\n]*\\n)*){1}- \\*\\*([^*]+)\\*\\*",
+            "non classé"
+        ],
+        "frein_2_n": [
+            "q6_freins., \\d+ codés\\)\\n(?:- \\*\\*[^*]+\\*\\* :[^\\n]*\\n(?:  > [^\\n]*\\n)*){1}- \\*\\*[^*]+\\*\\* : (\\d+)",
+            "null"
+        ],
+        "frein_2_pct": [
+            "q6_freins., \\d+ codés\\)\\n(?:- \\*\\*[^*]+\\*\\* :[^\\n]*\\n(?:  > [^\\n]*\\n)*){1}- \\*\\*[^*]+\\*\\* : \\d+ \\(([\\d.,]+) %\\)",
+            "null"
+        ],
+        "frein_3_label": [
+            "q6_freins., \\d+ codés\\)\\n(?:- \\*\\*[^*]+\\*\\* :[^\\n]*\\n(?:  > [^\\n]*\\n)*){2}- \\*\\*([^*]+)\\*\\*",
+            "non classé"
+        ],
+        "frein_3_n": [
+            "q6_freins., \\d+ codés\\)\\n(?:- \\*\\*[^*]+\\*\\* :[^\\n]*\\n(?:  > [^\\n]*\\n)*){2}- \\*\\*[^*]+\\*\\* : (\\d+)",
+            "null"
+        ],
+        "frein_3_pct": [
+            "q6_freins., \\d+ codés\\)\\n(?:- \\*\\*[^*]+\\*\\* :[^\\n]*\\n(?:  > [^\\n]*\\n)*){2}- \\*\\*[^*]+\\*\\* : \\d+ \\(([\\d.,]+) %\\)",
+            "null"
+        ],
+        "q14_codes": [
+            "q14_motif., (\\d+) codés",
+            "0"
+        ],
+        "refus_1_label": [
+            "q14_motif., \\d+ codés\\)\\n- \\*\\*([^*]+)\\*\\*",
+            "non classé"
+        ],
+        "refus_1_quote": [
+            "q14_motif., \\d+ codés\\)\\n- \\*\\*[^*]+\\*\\* : [^\\n]*\\n  > ([^\\n]+)",
+            "(aucun verbatim codé pour cette question)"
+        ]
+    },
+    "rules": [
+        {
+            "id": "munago-recommandation",
+            "comment": "Section de décision go/no-go : version argumentée, avec le tableau des inconnues restantes.",
+            "when": {
+                "any_contains": [
+                    "no-go commercial",
+                    "Recommandation :",
+                    "go conditionnel"
+                ]
+            },
+            "response": "munago.recommandation.json"
+        }
+    ],
+    "default": {
+        "comment": "Toute autre section : réécriture générique appuyée sur les seules statistiques de l'enquête.",
+        "response": "munago.section-generique.json"
+    }
+}

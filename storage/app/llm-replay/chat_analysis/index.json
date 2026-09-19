@@ -1,0 +1,47 @@
+{
+  "prompt": "chat_analysis",
+  "description": "Analyse métier des résultats SQL du chat Datamuse (`POST /chat/analyze-data`). Le texte est rédigé à la main ; les valeurs citées sont extraites de l'EXTRAIT DE RÉSULTATS réellement transmis par le web, c'est-à-dire des lignes qui viennent d'être exécutées sur la source. Résultat SIMULÉ.",
+  "rules": [
+    {
+      "id": "acompte-par-quartier",
+      "when": { "contains": ["\"quartier\""] },
+      "figures": {
+        "q_top": ["\\[\\{\"quartier\":\"([^\"]+)\"", "?"],
+        "q_top_n": ["\\[\\{\"quartier\":\"[^\"]+\",\"fiches_valides\":(\\d+)", "?"],
+        "q_top_acomptes": ["\\[\\{\"quartier\":\"[^\"]+\",\"fiches_valides\":\\d+,\"acomptes\":(\\d+)", "?"],
+        "q_top_taux": ["\\[\\{\"quartier\":\"[^\"]+\",\"fiches_valides\":\\d+,\"acomptes\":\\d+,\"taux_acompte_pct\":([\\d.]+)", "?"],
+        "q2": ["\\},\\{\"quartier\":\"([^\"]+)\"", "?"],
+        "q2_n": ["\\},\\{\"quartier\":\"[^\"]+\",\"fiches_valides\":(\\d+)", "?"],
+        "q2_acomptes": ["\\},\\{\"quartier\":\"[^\"]+\",\"fiches_valides\":\\d+,\"acomptes\":(\\d+)", "?"],
+        "q2_taux": ["\\},\\{\"quartier\":\"[^\"]+\",\"fiches_valides\":\\d+,\"acomptes\":\\d+,\"taux_acompte_pct\":([\\d.]+)", "?"]
+      },
+      "response": "acompte-par-quartier.md"
+    },
+    {
+      "id": "freins",
+      "when": { "contains": ["\"frein\""] },
+      "figures": {
+        "frein_top": ["\\[\\{\"frein\":\"([^\"]+)\"", "?"],
+        "frein_top_n": ["\\[\\{\"frein\":\"[^\"]+\",\"mentions\":(\\d+)", "?"],
+        "frein_top_pct": ["\\[\\{\"frein\":\"[^\"]+\",\"mentions\":\\d+,\"part_pct\":([\\d.]+)", "?"],
+        "frein_2": ["\\},\\{\"frein\":\"([^\"]+)\"", "?"],
+        "frein_2_n": ["\\},\\{\"frein\":\"[^\"]+\",\"mentions\":(\\d+)", "?"]
+      },
+      "response": "freins.md"
+    },
+    {
+      "id": "duree-par-enqueteur",
+      "when": { "contains": ["\"enqueteur\""] },
+      "figures": {
+        "enq_top": ["\\[\\{\"enqueteur\":\"([^\"]+)\"", "?"],
+        "enq_top_n": ["\\[\\{\"enqueteur\":\"[^\"]+\",\"fiches\":(\\d+)", "?"],
+        "enq_top_min": ["\\[\\{\"enqueteur\":\"[^\"]+\",\"fiches\":\\d+,\"duree_moyenne_min\":([\\d.]+)", "?"]
+      },
+      "response": "duree-par-enqueteur.md"
+    }
+  ],
+  "default": {
+    "comment": "Hors des trois questions de démonstration, le rejeu ne produit pas d'analyse : il le dit.",
+    "response": "hors-corpus.md"
+  }
+}

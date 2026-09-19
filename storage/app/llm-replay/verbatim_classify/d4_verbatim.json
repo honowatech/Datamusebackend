@@ -1,0 +1,12 @@
+{
+  "_comment": "Codage des verbatims réels de `d4_verbatim`. Rédigé à la main — résultat SIMULÉ.",
+  "fallback": { "themes": [], "sentiment": "neutral", "confidence": 0.2 },
+  "by_text": {
+    "Oui, c'est important, on est déjà serrés.": { "themes": ["budget_serre"], "sentiment": "negative", "confidence": 0.95 },
+    "Non, ça va, c'est le prix d'un crédit de communication.": { "themes": ["depense_negligeable"], "sentiment": "positive", "confidence": 0.93 },
+    "(silence, 4 secondes) Ça dépend des mois.": { "themes": ["variable_selon_mois"], "sentiment": "neutral", "confidence": 0.88 },
+    "Non, si c'est pour la sécurité de l'enfant on trouve.": { "themes": ["arbitrage_securite"], "sentiment": "positive", "confidence": 0.92 },
+    "Ce n'est pas rien. 4 000 c'est le sac de riz.": { "themes": ["budget_serre", "repere_concret"], "sentiment": "negative", "confidence": 0.93 },
+    "(rit) Vous savez, avec l'école privée, tout est important.": { "themes": ["budget_serre", "repere_concret"], "sentiment": "mixed", "confidence": 0.8 }
+  }
+}

@@ -1,0 +1,27 @@
+{
+    "prompt": "sql_complexe",
+    "description": "Requêtes SQL avancées du chat Datamuse. « Quels sont les freins les plus cités ? » suppose d'éclater une colonne multi-valuée (codes séparés par « ; ») : une CTE récursive SQLite le fait. Deux variantes, choisies d'après le SCHÉMA réellement transmis dans le prompt système — `q6_freins_themes` (classification IA, présente seulement après reconstruction de la source) ou, à défaut, `q6_freins_codes` (post-codage de l'enquêteur). C'est exactement l'arbitrage qu'un modèle fait en lisant le schéma. Résultat SIMULÉ.",
+    "rules": [
+        {
+            "id": "freins-themes-ia",
+            "when": {
+                "system": [
+                    "q6_freins_themes"
+                ],
+                "regex": "frein|obstacle|emp[êe]ch"
+            },
+            "response": "freins-themes-ia.json"
+        },
+        {
+            "id": "freins-postcode-enqueteur",
+            "comment": "La source n'a pas encore été reconstruite après la classification : on interroge le post-codage saisi par l'enquêteur.",
+            "when": {
+                "regex": "frein|obstacle|emp[êe]ch"
+            },
+            "response": "freins-postcode.json"
+        }
+    ],
+    "default": {
+        "response": "hors-corpus.json"
+    }
+}

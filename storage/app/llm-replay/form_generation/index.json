@@ -1,0 +1,21 @@
+{
+  "prompt": "form_generation",
+  "description": "Génération d'un questionnaire DFS v1 à partir d'un questionnaire papier. Corpus rédigé à la main à partir du texte réellement extrait de « MunaGo-Questionnaire-Terrain V1.0.docx » (DocxTextExtractor) : c'est la réponse qu'un bon modèle produirait sur CE document. Résultat SIMULÉ.",
+  "rules": [
+    {
+      "id": "munago-variante-invalide",
+      "comment": "Écrire « demo-reparation » dans les consignes de génération force une réponse volontairement invalide (3 erreurs `schema` + 1 `other_choice_missing`) : elle déclenche la tentative form_repair, qui rend la version corrigée. Sert la démonstration et le test de la chaîne de réparation.",
+      "when": { "contains": ["demo-reparation"] },
+      "response": "munago-terrain.invalide.json"
+    },
+    {
+      "id": "munago-terrain-v1",
+      "when": { "any_contains": ["MunaGo", "traceur GPS", "test d'acompte"] },
+      "response": "munago-terrain.v1.json"
+    }
+  ],
+  "default": {
+    "comment": "Repli : le corpus de rejeu ne couvre que le questionnaire MunaGo. Toute autre source reçoit donc ce même questionnaire — c'est une limite assumée de la simulation, pas un comportement de modèle.",
+    "response": "munago-terrain.v1.json"
+  }
+}

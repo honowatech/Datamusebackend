@@ -1,0 +1,193 @@
+{
+  "title": "MunaGo — étude de marché terrain de Douala : go / no-go",
+  "subtitle": "Ce que {{n_valides}} familles ont fait quand on leur a demandé 5 000 FCFA",
+  "summary": "L'étude a rencontré {{n_total}} familles à Douala, dont {{n_valides}} entretiens valides et {{n_hors_cible}} fiches hors cible. Le protocole ne retenait qu'un seul signal d'intérêt : un acompte réellement versé par Mobile Money. Ce taux s'établit à {{taux_acompte}} % ({{acompte_n}}/{{acompte_d}}). Dans le même temps, {{oui_verbal_n}} personnes ont donné un accord verbal sans payer et {{non_clair_n}} ont refusé clairement : l'écart entre l'enthousiasme déclaré et le geste payant, qui avait fait échouer le premier pilote, se reproduit. La chaîne d'engagement se réduit encore ensuite : {{retrait_n}} retraits sur {{retrait_d}} acomptes, {{activation_n}} activation(s) sur {{activation_d}} appareil(s) retiré(s). Le point de rupture médian de l'appareil s'établit à {{prix_rupture_mediane}} FCFA, au-dessus des 20 000 FCFA envisagés, et le frein le plus fréquemment codé est « {{frein_1_label}} ». La recommandation est un no-go sur le lancement commercial en l'état, et un go conditionnel sur une seconde vague resserrée dont le protocole est décrit en dernière section.",
+  "key_figures": [
+    { "label": "Taux d'acompte (fiches valides)", "value": "{{taux_acompte}} % ({{acompte_n}}/{{acompte_d}})", "trend": "down" },
+    { "label": "Accords verbaux sans paiement", "value": "{{oui_verbal_n}} fiches ({{oui_verbal_pct}} %)", "trend": "flat" },
+    { "label": "Retrait sous 7 jours parmi les acomptes", "value": "{{retrait_n}}/{{retrait_d}}", "trend": "down" },
+    { "label": "Activation à J+14 parmi les retraits", "value": "{{activation_n}}/{{activation_d}}", "trend": "flat" },
+    { "label": "Prix de rupture médian de l'appareil", "value": "{{prix_rupture_mediane}} FCFA", "trend": "flat" },
+    { "label": "Entretiens valides", "value": "n = {{n_valides}}", "trend": "up" }
+  ],
+  "sections": [
+    {
+      "heading": "Méthodologie et échantillon",
+      "level": 2,
+      "paragraphs": [
+        "L'enquête a été administrée en face à face à Douala, une fiche par personne, selon le questionnaire terrain MunaGo V1.0. Le protocole imposait un filtre d'éligibilité en quatre points — consentement, absence de contact antérieur, au moins un enfant de 3 à 18 ans scolarisé, au moins un signal de capacité financière — et refusait explicitement toute mesure d'intention : seul un acompte effectivement versé compte comme signal.",
+        "{{n_total}} fiches ont été collectées, dont {{n_valides}} valides et {{n_hors_cible}} hors cible ({{taux_hors_cible}} % des contacts). La durée médiane d'un entretien est de {{duree_mediane}} secondes, dans la fenêtre de 12 à 18 minutes prévue : aucun signe de passation accélérée."
+      ],
+      "bullets": [
+        "Échantillon non probabiliste, recruté en rue, à la sortie des écoles, au marché, au culte et par connaissance.",
+        "Le quota « maximum 5 fiches par réseau d'origine » est dépassé ({{quota_reseau}} pour un plafond de 5) : une partie de l'échantillon partage un même relais.",
+        "Les quotas de couverture sont tenus : {{n_valides}} fiches valides pour un objectif de 30, et plus de 3 quartiers distincts."
+      ],
+      "table": {
+        "title": "Composition de l'échantillon",
+        "columns": ["Indicateur", "Valeur"],
+        "rows": [
+          ["Fiches exploitables", "{{n_total}}"],
+          ["Entretiens valides", "{{n_valides}}"],
+          ["Fiches hors cible", "{{n_hors_cible}} ({{taux_hors_cible}} %)"],
+          ["Durée médiane d'entretien", "{{duree_mediane}} s"],
+          ["Répondantes (femmes)", "{{femmes_n}} ({{femmes_pct}} %)"],
+          ["Enfants scolarisés par foyer (médiane)", "{{enfants_mediane}}"]
+        ]
+      },
+      "callouts": [
+        { "kind": "warning", "text": "Les effectifs de la chaîne d'engagement ({{acompte_n}} acomptes, {{retrait_n}} retraits, {{activation_n}} activation(s)) sont trop faibles pour supporter un taux de conversion. Ils sont rapportés comme observations, jamais comme mesures." }
+      ]
+    },
+    {
+      "heading": "Le test d'acompte : ce que les familles font, pas ce qu'elles disent",
+      "level": 2,
+      "paragraphs": [
+        "La proposition d'acompte a été faite une seule fois, sans alternative ni relance, comme le prévoit le protocole. Sur {{acompte_d}} fiches valides, {{acompte_n}} personnes ont versé les 5 000 FCFA par Mobile Money, soit {{taux_acompte}} %.",
+        "Le résultat décisif n'est pas ce taux, mais sa comparaison avec le déclaratif : {{oui_verbal_n}} personnes ({{oui_verbal_pct}} %) ont dit oui sans payer, en invoquant l'absence de Mobile Money ou un paiement différé. Comptées comme des non par le protocole, elles constituent exactement la population qui avait fait croire au succès du premier pilote."
+      ],
+      "chart": {
+        "type": "bar",
+        "title": "Décision au moment de la proposition d'acompte",
+        "x": ["OUI — verse l'acompte", "OUI verbal seulement", "NON clair", "Hésite puis non", "Hésite puis oui + paiement"],
+        "series": [{ "name": "Fiches valides", "data": [{{dec_oui_acompte_n}}, {{oui_verbal_n}}, {{non_clair_n}}, {{hesite_non_n}}, {{hesite_oui_n}}] }],
+        "unit": null,
+        "source": "Question 13 « Décision », enquête MunaGo terrain"
+      },
+      "table": {
+        "title": "Ce que devient un acompte",
+        "columns": ["Étape", "Effectif", "Taux"],
+        "rows": [
+          ["Fiches valides", "{{n_valides}}", "100 %"],
+          ["Acompte versé", "{{acompte_n}}", "{{taux_acompte}} %"],
+          ["Retrait ≤ 7 jours", "{{retrait_n}}", "{{taux_retrait}} % des acomptes"],
+          ["Appareil activé à J+14", "{{activation_n}}", "{{taux_activation}} % des retraits"]
+        ]
+      },
+      "callouts": [
+        { "kind": "quote", "text": "{{refus_1_quote}}" }
+      ]
+    },
+    {
+      "heading": "Ce qui bloque : freins exprimés et motifs de refus",
+      "level": 2,
+      "paragraphs": [
+        "Les réponses ouvertes ont été classées sur un livre de codes construit à partir des verbatims eux-mêmes. Sur {{q6_codes}} réponses codées à la question « Qu'est-ce qui vous empêcherait d'utiliser cette solution ? », le frein dominant est « {{frein_1_label}} » ({{frein_1_n}} mentions, {{frein_1_pct}} %), devant « {{frein_2_label}} » ({{frein_2_n}}) et « {{frein_3_label}} » ({{frein_3_n}}).",
+        "Le motif de refus de l'acompte se lit deux fois : dans le codage des réponses ouvertes, où il domine avec « {{refus_1_label}} », et dans le post-codage saisi par l'enquêteur, dont la ventilation figure ci-dessous. Les deux lectures doivent être confrontées avant toute conclusion : la première est produite par un modèle, la seconde par la personne qui était en face du répondant."
+      ],
+      "table": {
+        "title": "Freins les plus codés (question 6)",
+        "columns": ["Frein", "Mentions", "Part des verbatims codés"],
+        "rows": [
+          ["{{frein_1_label}}", {{frein_1_n}}, "{{frein_1_pct}} %"],
+          ["{{frein_2_label}}", {{frein_2_n}}, "{{frein_2_pct}} %"],
+          ["{{frein_3_label}}", {{frein_3_n}}, "{{frein_3_pct}} %"]
+        ]
+      },
+      "chart": {
+        "type": "bar",
+        "title": "Thème principal du refus d'acompte (post-codage enquêteur)",
+        "x": ["Pas l'argent maintenant", "Doit en parler au conjoint", "Pas convaincu du produit", "Pas le moment", "Prix global trop élevé", "Méfiance acompte", "Ne veut pas se déplacer", "Retrait trop loin"],
+        "series": [{ "name": "Refus", "data": [{{refus_argent_n}}, {{refus_conjoint_n}}, {{refus_produit_n}}, {{refus_plus_tard_n}}, {{refus_prix_n}}, {{refus_mefiance_n}}, {{refus_deplacement_n}}, {{refus_loin_n}}] }],
+        "unit": null,
+        "source": "Question 14 « Thème principal du refus », enquête MunaGo terrain"
+      },
+      "callouts": [
+        { "kind": "quote", "text": "{{frein_1_quote}}" },
+        { "kind": "info", "text": "Ces hiérarchies comptent des mentions, pas des personnes : un même parent peut exprimer plusieurs freins, et les réponses les plus courtes (« Rien », silence) restent non codées." }
+      ]
+    },
+    {
+      "heading": "Prix : où l'intérêt s'effondre",
+      "level": 2,
+      "paragraphs": [
+        "À 20 000 FCFA pour l'appareil seul, {{prix_acceptable_n}} répondants ({{prix_appareil_acceptable_pct}} %) jugent le prix « cher mais acceptable », {{prix_trop_cher_n}} ({{prix_appareil_trop_cher_pct}} %) le jugent « trop cher » et {{prix_normal_n}} le trouvent normal. Le point de rupture déclaré a une médiane de {{prix_rupture_mediane}} FCFA (n = {{prix_rupture_n}} réponses chiffrées) : le prix envisagé se situe donc sous le seuil de rejet déclaré.",
+        "Sur l'abonnement, la lecture est inverse. La modalité de refus la plus choisie est le premier palier proposé, 2 000 FCFA/mois : une part significative de l'échantillon refuse l'abonnement quel que soit son montant, ce que l'échelle proposée ne permet pas de mesurer plus finement.",
+        "Entre les deux formules, {{option_a_n}} répondants ({{option_a_pct}} %) préfèrent l'option A — appareil à 20 000 FCFA et abonnement à 3 000 FCFA/mois sans engagement — à l'entrée à bas prix assortie d'un engagement de 12 mois. La sensibilité porte sur l'engagement, pas sur le ticket d'entrée."
+      ],
+      "chart": {
+        "type": "bar",
+        "title": "Seuil de refus de l'abonnement mensuel",
+        "x": ["2 000", "3 000", "4 000", "4 500", "5 000", "6 000+", "Autre"],
+        "series": [{ "name": "Répondants", "data": [{{abo_2000_n}}, {{abo_3000_n}}, {{abo_4000_n}}, {{abo_4500_n}}, {{abo_5000_n}}, {{abo_6000_n}}, {{abo_autre_n}}] }],
+        "unit": "FCFA",
+        "source": "Question F3, enquête MunaGo terrain"
+      },
+      "table": {
+        "title": "Perception du prix de l'appareil à 20 000 FCFA",
+        "columns": ["Jugement", "Effectif", "Part"],
+        "rows": [
+          ["C'est normal", {{prix_normal_n}}, "{{prix_normal_pct}} %"],
+          ["C'est cher mais acceptable", {{prix_acceptable_n}}, "{{prix_appareil_acceptable_pct}} %"],
+          ["C'est trop cher", {{prix_trop_cher_n}}, "{{prix_appareil_trop_cher_pct}} %"]
+        ]
+      }
+    },
+    {
+      "heading": "Mécanique de paiement et confiance dans la marque",
+      "level": 2,
+      "paragraphs": [
+        "Le moyen de règlement préféré est MTN MoMo ({{momo_n}} répondants), devant Orange Money ({{om_n}}). Sur la périodicité, le paiement mensuel reste majoritaire, mais une part notable des répondants se dit prête à payer plusieurs mois d'avance contre une réduction — piste directement exploitable pour limiter l'attrition liée au rappel mensuel.",
+        "Sur la vie privée, {{q12_non_securite_pct}} % déclarent que la localisation permanente ne les dérange pas si elle sert la sécurité de l'enfant, contre {{q12_oui_beaucoup_pct}} % que cela dérange beaucoup. Le sujet est donc réel sans être bloquant ; les conditions posées par les parents sont concrètes et peu coûteuses à satisfaire."
+      ],
+      "bullets": [
+        "Canal de rappel préféré : WhatsApp ({{whatsapp_n}} répondants), ce qui valide le protocole de relance J+4.",
+        "Conditions de confiance les plus citées : pouvoir couper le suivi, réserver l'accès aux parents, disposer d'un interlocuteur physique.",
+        "{{marque_inquiete_pct}} % déclarent que le caractère camerounais et peu connu de la société les inquiète."
+      ],
+      "callouts": [
+        { "kind": "quote", "text": "Que seuls les parents aient accès, pas le personnel." },
+        { "kind": "success", "text": "Aucune condition de confiance citée par les parents n'exige un développement produit lourd : coupure du suivi, cloisonnement des accès et adresse physique sont des engagements contractuels et organisationnels." }
+      ]
+    },
+    {
+      "heading": "Recommandation : no-go commercial, go conditionnel sur une seconde vague",
+      "level": 2,
+      "paragraphs": [
+        "En l'état, les données ne soutiennent pas un lancement commercial. Le taux d'acompte de {{taux_acompte}} % ({{acompte_n}}/{{acompte_d}}) est trop bas pour amortir une acquisition en face à face, et la déperdition entre acompte et retrait ({{retrait_n}}/{{retrait_d}}) reproduit l'échec du premier pilote — c'est-à-dire précisément le risque que l'étude devait lever.",
+        "Les données ne permettent pas non plus de conclure à un échec du produit. Le point de rupture médian de l'appareil ({{prix_rupture_mediane}} FCFA) reste au-dessus des 20 000 FCFA envisagés, le motif de refus le plus codé est « {{refus_1_label}} » — une raison de circonstance, pas un rejet du produit — et {{option_a_n}} répondants préfèrent la formule sans engagement long.",
+        "La décision recommandée est donc un no-go sur le déploiement et un go sur une seconde vague de terrain, resserrée sur les deux inconnues qui tuent le projet si elles sont mal résolues : la capacité des familles à venir retirer l'appareil, et le maintien de l'usage après quelques semaines."
+      ],
+      "bullets": [
+        "No-go : aucune commande de série, aucune campagne d'acquisition, aucune promesse de livraison.",
+        "Go : une vague de 30 acomptes minimum, avec un point de retrait par quartier travaillé.",
+        "Décision suivante à date fixe, sur le seul taux de retrait à 7 jours."
+      ],
+      "callouts": [
+        { "kind": "warning", "text": "Avec {{acompte_n}} acomptes, tout taux de conversion calculé sur cette base a un intervalle de confiance plus large que l'écart entre un succès et un échec. Ne pas construire de plan d'affaires sur ces ratios." }
+      ]
+    }
+  ],
+  "recommendations": [
+    "Suspendre toute commande de série et toute campagne d'acquisition : le taux d'acompte de {{taux_acompte}} % ({{acompte_n}}/{{acompte_d}}) ne finance pas un recrutement en face à face.",
+    "Relancer une vague de terrain visant 30 acomptes minimum, en ouvrant un point de retrait par quartier travaillé : le retrait, et non l'acompte, est l'étape qui a fait échouer le pilote ({{retrait_n}}/{{retrait_d}} aujourd'hui).",
+    "Traiter le frein le plus codé (« {{frein_1_label}} », {{frein_1_n}} mentions) comme un point de conception, pas comme une objection commerciale : il se corrige par le produit, la garantie ou la notice, jamais par une remise.",
+    "Conserver l'option A (appareil 20 000 FCFA + 3 000 FCFA/mois sans engagement) comme offre de référence : elle est préférée par {{option_a_n}} répondants ({{option_a_pct}} %) à l'entrée à bas prix avec engagement de 12 mois.",
+    "Tester un palier d'abonnement sous 2 000 FCFA/mois : c'est le premier seuil proposé et déjà le plus choisi comme seuil de refus, donc le seul point de l'échelle qui n'a pas été mesuré.",
+    "Publier trois engagements de confiance avant la vague suivante — coupure du suivi à la demande, accès réservé aux parents, adresse physique joignable — qui répondent mot pour mot aux conditions posées par les répondants."
+  ],
+  "appendix": {
+    "methodology": "Enquête en face à face administrée à Douala selon le questionnaire terrain MunaGo V1.0, une fiche par personne. Filtre d'éligibilité en quatre points appliqué avant l'entretien ; les fiches filtrées sont conservées et comptées comme hors cible. Le test d'engagement consiste en une proposition unique d'acompte de 5 000 FCFA par Mobile Money, sans alternative ni relance, suivie d'un protocole de suivi à J+4 (rappel WhatsApp unique), J+7 (clôture du retrait) et J+14 (vérification d'activation). Limites : échantillon non probabiliste recruté en rue et par relais ; quota « 5 fiches par réseau » dépassé ({{quota_reseau}}/5) ; effectifs de la chaîne d'engagement à un ou deux chiffres ; toutes les réponses hors acompte sont déclaratives et n'ont été confrontées à aucune observation d'usage. Les montants sont exprimés en francs CFA (FCFA, XAF).",
+    "sample": "{{n_total}} fiches exploitables collectées à Douala, dont {{n_valides}} entretiens valides et {{n_hors_cible}} fiches hors cible ({{taux_hors_cible}} %). Durée médiane d'entretien : {{duree_mediane}} secondes. Répondants majoritairement des femmes ({{femmes_n}}, {{femmes_pct}} %), âge médian {{age_median}} ans, médiane de {{enfants_mediane}} enfants scolarisés par foyer. Couverture : plus de trois quartiers distincts, conformément au quota de couverture.",
+    "tables": [
+      {
+        "title": "Indicateurs clés de l'étude",
+        "columns": ["Indicateur", "Numérateur", "Dénominateur", "Valeur"],
+        "rows": [
+          ["% d'acompte / fiches valides", {{acompte_n}}, {{acompte_d}}, "{{taux_acompte}} %"],
+          ["% retrait ≤ 7 j parmi les acomptes", {{retrait_n}}, {{retrait_d}}, "{{taux_retrait}} %"],
+          ["% activé à J+14 parmi les retraits", {{activation_n}}, {{activation_d}}, "{{taux_activation}} %"],
+          ["% hors cible / contacts", {{n_hors_cible}}, {{n_total}}, "{{taux_hors_cible}} %"]
+        ]
+      }
+    ],
+    "glossary": [
+      { "term": "Acompte", "definition": "Versement de 5 000 FCFA par Mobile Money au moment de l'entretien, remboursable et déductible du prix de l'appareil. Seul signal d'intérêt retenu par le protocole." },
+      { "term": "Oui verbal", "definition": "Accord exprimé sans versement (« je n'ai pas MoMo », « je paie ce soir »). Compté comme un refus, le prétexte étant noté." },
+      { "term": "Hors cible", "definition": "Fiche interrompue par un filtre d'éligibilité : refus de participer, contact antérieur, absence d'enfant scolarisé de 3 à 18 ans, aucun signal de capacité financière." },
+      { "term": "Prix de rupture", "definition": "Prix d'appareil à partir duquel le répondant déclare que l'achat ne vaut plus le coup." },
+      { "term": "Taux de retrait", "definition": "Part des acomptes suivis d'un retrait effectif de l'appareil dans les 7 jours suivant le versement." },
+      { "term": "FCFA (XAF)", "definition": "Franc CFA d'Afrique centrale, devise de tous les montants cités." }
+    ]
+  }
+}

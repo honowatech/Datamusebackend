@@ -1,0 +1,6 @@
+{
+  "type": "message",
+  "content": "Le mode « rejeu » (LLM_DRIVER=replay) ne couvre que les trois questions de démonstration de la source MunaGo : le taux d'acompte par quartier, les freins les plus cités et la durée moyenne d'entretien par enquêteur. Aucune requête SQL n'est inventée pour une autre question : reformulez avec l'une de ces trois, ou repassez en LLM_DRIVER=live avec une vraie clé d'API.",
+  "chart_config": null,
+  "python_code": null
+}

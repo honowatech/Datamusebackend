@@ -1,0 +1,10 @@
+{
+  "type": "sql",
+  "content": "SELECT enqueteur_nom AS enqueteur,\n       COUNT(*) AS fiches,\n       ROUND(AVG(duree_sec) / 60.0, 1) AS duree_moyenne_min,\n       ROUND(AVG(duree_sec)) AS duree_moyenne_sec\nFROM reponses\nWHERE statut <> 'rejected'\n  AND duree_sec IS NOT NULL\nGROUP BY enqueteur_nom\nORDER BY duree_moyenne_min DESC",
+  "chart_config": {
+    "type": "bar",
+    "x_axis": "enqueteur",
+    "series": [{ "key": "duree_moyenne_min", "name": "Durée moyenne (min)" }]
+  },
+  "python_code": null
+}

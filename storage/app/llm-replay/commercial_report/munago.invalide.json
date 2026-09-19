@@ -1,0 +1,39 @@
+{
+  "title": "MunaGo — étude de marché terrain de Douala : go / no-go",
+  "author": "Cabinet d'études (champ inventé par le modèle)",
+  "summary": "Sur {{n_valides}} entretiens valides, {{acompte_n}} familles ont versé l'acompte de 5 000 FCFA, soit {{taux_acompte}} %. {{oui_verbal_n}} autres ont dit oui sans payer. La recommandation est un no-go commercial et un go sur une seconde vague centrée sur le retrait.",
+  "key_figures": [
+    { "label": "Taux d'acompte", "value": "{{taux_acompte}} % ({{acompte_n}}/{{acompte_d}})", "trend": "hausse" },
+    { "label": "Retrait ≤ 7 j", "value": "{{retrait_n}}/{{retrait_d}}", "trend": "down" }
+  ],
+  "sections": [
+    {
+      "heading": "Méthodologie et échantillon",
+      "level": 2,
+      "confidence": 0.8,
+      "paragraphs": [
+        "{{n_total}} fiches ont été collectées à Douala, dont {{n_valides}} valides et {{n_hors_cible}} hors cible ({{taux_hors_cible}} % des contacts). La durée médiane d'un entretien est de {{duree_mediane}} secondes."
+      ]
+    },
+    {
+      "heading": "Le test d'acompte",
+      "level": 4,
+      "paragraphs": [
+        "Sur {{acompte_d}} fiches valides, {{acompte_n}} personnes ont versé les 5 000 FCFA, soit {{taux_acompte}} %. {{oui_verbal_n}} ont donné un accord verbal sans payer."
+      ],
+      "table": {
+        "title": "Perception du prix de l'appareil à 20 000 FCFA",
+        "columns": ["Jugement", "Effectif", "Part"],
+        "rows": [
+          ["C'est normal", {{prix_normal_n}}, "{{prix_normal_pct}} %"],
+          ["C'est cher mais acceptable", {{prix_acceptable_n}}],
+          ["C'est trop cher", {{prix_trop_cher_n}}, "{{prix_appareil_trop_cher_pct}} %"]
+        ]
+      }
+    }
+  ],
+  "recommendations": [
+    "Suspendre toute commande de série tant que le taux d'acompte reste à {{taux_acompte}} %.",
+    "Relancer une vague visant 30 acomptes, avec un point de retrait par quartier travaillé."
+  ]
+}

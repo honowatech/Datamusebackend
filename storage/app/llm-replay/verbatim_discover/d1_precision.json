@@ -1,0 +1,5 @@
+[
+  { "key": "relais_adulte", "label": "Passe par un adulte relais", "description": "Attribuer quand la vérification passe par un tiers adulte : chauffeur, enseignante, voisine, membre de la famille proche de l'école.", "examples": ["Le chauffeur m'envoie un message quand ils sont arrivés.", "J'appelle la maîtresse, elle a mon numéro.", "Ma sœur habite près de l'école, elle passe voir."] },
+  { "key": "appel_direct_enfant", "label": "Appelle l'enfant directement", "description": "Attribuer quand l'enfant dispose d'un moyen de communication propre et que le parent le joint lui-même.", "examples": ["L'enfant a un petit téléphone, je l'appelle."] },
+  { "key": "aucune_verification", "label": "Ne vérifie pas, fait confiance", "description": "Attribuer quand le parent déclare ne pas avoir de moyen de vérifier et s'en remettre à la confiance.", "examples": ["Je ne peux pas vérifier, je fais confiance."] }
+]

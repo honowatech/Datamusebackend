@@ -1,0 +1,11 @@
+{
+  "_comment": "Codage des verbatims réels de `q12_conditions`. Rédigé à la main — résultat SIMULÉ.",
+  "fallback": { "themes": [], "sentiment": "neutral", "confidence": 0.2 },
+  "by_text": {
+    "Qu'on puisse couper quand on veut.": { "themes": ["controle_coupure"], "sentiment": "neutral", "confidence": 0.95 },
+    "Que seuls les parents aient accès, pas le personnel.": { "themes": ["acces_reserve_parents"], "sentiment": "neutral", "confidence": 0.95 },
+    "Que ce soit une société sérieuse, avec un bureau où je peux aller.": { "themes": ["societe_identifiable"], "sentiment": "neutral", "confidence": 0.93 },
+    "Que les données ne soient pas vendues.": { "themes": ["non_revente_donnees"], "sentiment": "negative", "confidence": 0.9 },
+    "Une garantie écrite.": { "themes": ["garantie_ecrite"], "sentiment": "neutral", "confidence": 0.9 }
+  }
+}

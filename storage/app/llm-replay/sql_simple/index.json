@@ -1,0 +1,19 @@
+{
+  "prompt": "sql_simple",
+  "description": "Génération SQL du chat Datamuse sur la source matérialisée de l'enquête MunaGo (SQLite, table `reponses`). Les requêtes ci-dessous ont été écrites à la main contre le schéma RÉEL de la source et exécutées avant d'être versionnées. Hors des trois questions de démonstration, le rejeu répond par un `message` explicite plutôt que d'inventer du SQL. Résultat SIMULÉ.",
+  "rules": [
+    {
+      "id": "acompte-par-quartier",
+      "comment": "« Quel est le taux d'acompte par quartier ? »",
+      "when": { "regex": "acompte[\\s\\S]*(quartier|zone)|(quartier|zone)[\\s\\S]*acompte" },
+      "response": "acompte-par-quartier.json"
+    },
+    {
+      "id": "duree-par-enqueteur",
+      "comment": "« Quelle est la durée moyenne d'entretien par enquêteur ? »",
+      "when": { "regex": "(dur[ée]e|temps)[\\s\\S]*(enqu[êe]teur|agent)|(enqu[êe]teur|agent)[\\s\\S]*(dur[ée]e|temps)" },
+      "response": "duree-par-enqueteur.json"
+    }
+  ],
+  "default": { "response": "hors-corpus.json" }
+}

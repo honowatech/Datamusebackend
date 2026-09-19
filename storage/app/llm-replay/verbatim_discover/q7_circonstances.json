@@ -1,0 +1,7 @@
+[
+  { "key": "moquerie_camarades", "label": "Moqueries des camarades", "description": "Attribuer quand le parent redoute le regard des autres enfants comme raison de ne pas porter l'appareil.", "examples": ["Si les camarades se moquent de lui."] },
+  { "key": "changement_sac_sport", "label": "Changement de sac, sport", "description": "Attribuer quand la rupture vient d'un changement de contenant ou d'activité : autre sac, séance de sport.", "examples": ["S'il change de sac ou quand il va au sport."] },
+  { "key": "sac_reste_voiture", "label": "Le sac reste dans la voiture", "description": "Attribuer quand l'appareil est séparé de l'enfant parce que le sac reste dans un véhicule.", "examples": ["Le sac reste parfois dans la voiture du chauffeur."] },
+  { "key": "jeux_quartier", "label": "Jeux dans le quartier", "description": "Attribuer quand l'enfant sort sans son sac pour jouer à proximité du domicile.", "examples": ["Quand il joue dehors dans le quartier."] },
+  { "key": "weekend_hors_ecole", "label": "Week-end et hors école", "description": "Attribuer quand la rupture est liée aux périodes sans cartable : week-end, séjour chez un proche.", "examples": ["Le week-end chez la grand-mère, il n'a pas son sac."] }
+]

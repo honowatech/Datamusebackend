@@ -1,0 +1,12 @@
+{
+  "prompt": "form_repair",
+  "description": "Réparation d'un DFS v1 refusé par DfsValidator. Le rejeu rend la version corrigée du questionnaire MunaGo : c'est exactement ce que fait un modèle à qui l'on transmet le document fautif et la liste des erreurs. Résultat SIMULÉ.",
+  "rules": [
+    {
+      "id": "munago-corrige",
+      "when": { "any_contains": ["MunaGo", "traceur GPS"] },
+      "response": "munago-terrain.corrige.json"
+    }
+  ],
+  "default": { "response": "munago-terrain.corrige.json" }
+}

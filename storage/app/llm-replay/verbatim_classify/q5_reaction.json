@@ -1,0 +1,18 @@
+{
+  "_comment": "Codage des verbatims réels de `q5_reaction` (première réaction au concept). Rédigé à la main — résultat SIMULÉ.",
+  "fallback": { "themes": [], "sentiment": "neutral", "confidence": 0.2 },
+  "by_text": {
+    "Non, moi je n'aime pas ces choses-là. On surveille trop les enfants.": { "themes": ["rejet_surveillance"], "sentiment": "negative", "confidence": 0.95 },
+    "Ah, c'est pas mal ça. Ça marche même quand il est à l'école ?": { "themes": ["demande_demonstration"], "sentiment": "positive", "confidence": 0.75 },
+    "Mouais. Je vais réfléchir.": { "themes": ["reponse_polie_differee"], "sentiment": "neutral", "confidence": 0.9 },
+    "Ça capte ici à Douala ? Avec le réseau qu'on a ?": { "themes": ["doute_couverture_reseau"], "sentiment": "neutral", "confidence": 0.95 },
+    "Et si l'enfant l'enlève ? Vous voyez, ça ne sert à rien.": { "themes": ["doute_port_par_enfant"], "sentiment": "negative", "confidence": 0.93 },
+    "Waouh, on peut voir ça sur mon téléphone directement ? Montrez-moi.": { "themes": ["demande_demonstration"], "sentiment": "positive", "confidence": 0.92 },
+    "Bon, c'est une bonne idée mais il faut voir le prix de l'abonnement.": { "themes": ["prix_juge_eleve"], "sentiment": "mixed", "confidence": 0.85 },
+    "Franchement ça m'intéresse, ma fille rentre seule du collège depuis la rentrée.": { "themes": ["interet_trajet_reel"], "sentiment": "positive", "confidence": 0.95 },
+    "Hum. C'est bien. Mais 20 000 c'est beaucoup pour un petit truc comme ça.": { "themes": ["prix_juge_eleve"], "sentiment": "mixed", "confidence": 0.9 },
+    "C'est comme un téléphone ? On appelle dedans ?": { "themes": ["confusion_avec_telephone"], "sentiment": "neutral", "confidence": 0.9 },
+    "Je connais quelqu'un qui a acheté une montre comme ça, elle a duré deux mois.": { "themes": ["doute_durabilite"], "sentiment": "negative", "confidence": 0.9 },
+    "C'est bien pensé. Le chauffeur parfois il fait des détours, on ne sait pas.": { "themes": ["interet_trajet_reel"], "sentiment": "positive", "confidence": 0.88 }
+  }
+}

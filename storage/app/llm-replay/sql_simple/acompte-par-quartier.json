@@ -1,0 +1,10 @@
+{
+  "type": "sql",
+  "content": "SELECT quartier_lib AS quartier,\n       COUNT(*) AS fiches_valides,\n       SUM(CASE WHEN acompte_verse = 1 THEN 1 ELSE 0 END) AS acomptes,\n       ROUND(100.0 * SUM(CASE WHEN acompte_verse = 1 THEN 1 ELSE 0 END) / COUNT(*), 1) AS taux_acompte_pct\nFROM reponses\nWHERE statut <> 'rejected'\n  AND resultat_filtre = 'valide'\nGROUP BY quartier_lib\nORDER BY taux_acompte_pct DESC, fiches_valides DESC",
+  "chart_config": {
+    "type": "bar",
+    "x_axis": "quartier",
+    "series": [{ "key": "taux_acompte_pct", "name": "Taux d'acompte (%)" }]
+  },
+  "python_code": null
+}

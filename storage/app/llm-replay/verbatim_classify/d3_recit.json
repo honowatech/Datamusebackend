@@ -1,0 +1,11 @@
+{
+  "_comment": "Codage des verbatims réels de `d3_recit`. Rédigé à la main — résultat SIMULÉ.",
+  "fallback": { "themes": [], "sentiment": "neutral", "confidence": 0.2 },
+  "by_text": {
+    "Il est allé jouer chez un camarade sans prévenir. On l'a cherché dans tout le quartier jusqu'à 19h. Depuis je lui ai interdit de sortir seul.": { "themes": ["sortie_non_annoncee"], "sentiment": "negative", "confidence": 0.92 },
+    "Un jour de grève des taxis, il est rentré à pied par un autre chemin. J'ai appelé l'école, ils m'ont dit qu'il était déjà parti. Il est arrivé à 17h au lieu de 15h.": { "themes": ["trajet_perturbe", "defaut_information_adulte"], "sentiment": "negative", "confidence": 0.9 },
+    "À la fête de l'école, je l'ai perdu de vue vingt minutes. J'ai eu très peur. Finalement il était avec un enseignant.": { "themes": ["perte_de_vue_evenement"], "sentiment": "negative", "confidence": 0.93 },
+    "La nounou l'avait emmené au marché sans me dire. J'ai appelé, son téléphone était éteint. Ils sont revenus une heure après.": { "themes": ["sortie_non_annoncee", "defaut_information_adulte"], "sentiment": "negative", "confidence": 0.91 },
+    "L'année dernière, le bus scolaire est tombé en panne à Ndokoti. Personne ne m'a appelée. J'ai attendu deux heures devant la maison. Après on a su que le chauffeur avait déposé les enfants chez un parent.": { "themes": ["trajet_perturbe", "defaut_information_adulte"], "sentiment": "negative", "confidence": 0.94 }
+  }
+}

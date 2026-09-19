@@ -1,0 +1,11 @@
+{
+  "_comment": "Codage des verbatims réels de `q7_circonstances`. Rédigé à la main — résultat SIMULÉ.",
+  "fallback": { "themes": [], "sentiment": "neutral", "confidence": 0.2 },
+  "by_text": {
+    "Si les camarades se moquent de lui.": { "themes": ["moquerie_camarades"], "sentiment": "negative", "confidence": 0.95 },
+    "S'il change de sac ou quand il va au sport.": { "themes": ["changement_sac_sport"], "sentiment": "neutral", "confidence": 0.95 },
+    "Le sac reste parfois dans la voiture du chauffeur.": { "themes": ["sac_reste_voiture"], "sentiment": "neutral", "confidence": 0.92 },
+    "Quand il joue dehors dans le quartier.": { "themes": ["jeux_quartier"], "sentiment": "neutral", "confidence": 0.9 },
+    "Le week-end chez la grand-mère, il n'a pas son sac.": { "themes": ["weekend_hors_ecole"], "sentiment": "neutral", "confidence": 0.92 }
+  }
+}

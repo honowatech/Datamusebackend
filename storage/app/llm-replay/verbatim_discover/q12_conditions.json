@@ -1,0 +1,7 @@
+[
+  { "key": "controle_coupure", "label": "Pouvoir couper le suivi quand on veut", "description": "Attribuer quand la condition posée est la maîtrise de l'activation : pouvoir arrêter le suivi à tout moment.", "examples": ["Qu'on puisse couper quand on veut."] },
+  { "key": "acces_reserve_parents", "label": "Accès réservé aux parents", "description": "Attribuer quand la condition porte sur les personnes autorisées à voir la position : seuls les parents, pas le personnel de l'entreprise.", "examples": ["Que seuls les parents aient accès, pas le personnel."] },
+  { "key": "societe_identifiable", "label": "Une société joignable physiquement", "description": "Attribuer quand la condition est l'existence d'un interlocuteur réel : bureau, adresse, société sérieuse.", "examples": ["Que ce soit une société sérieuse, avec un bureau où je peux aller."] },
+  { "key": "non_revente_donnees", "label": "Données non revendues", "description": "Attribuer quand la condition porte explicitement sur l'usage commercial des données.", "examples": ["Que les données ne soient pas vendues."] },
+  { "key": "garantie_ecrite", "label": "Un engagement écrit", "description": "Attribuer quand la condition est formelle : garantie, contrat, engagement écrit.", "examples": ["Une garantie écrite."] }
+]

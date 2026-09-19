@@ -1,0 +1,2392 @@
+{
+    "dfs_version": "1.0",
+    "id": "00000000-0000-4000-8000-000000000000",
+    "version": 1,
+    "title": {
+        "fr": "MunaGo — questionnaire d'étude de marché terrain"
+    },
+    "description": {
+        "fr": "Familles urbaines · Douala · entretien face à face 12–15 min + test d'acompte. Décider si le projet MunaGo mérite d'être poursuivi : seuls comptent les gestes qui coûtent quelque chose."
+    },
+    "settings": {
+        "languages": [
+            "fr"
+        ],
+        "default_language": "fr",
+        "fiche_code": {
+            "pattern": "{VILLE}-{QUARTIER}-{NN}",
+            "sources": {
+                "VILLE": "ville",
+                "QUARTIER": "quartier"
+            },
+            "counter": {
+                "width": 2,
+                "scope": "sources",
+                "start": 1
+            }
+        },
+        "quotas": [
+            {
+                "key": "fiches_valides",
+                "label": {
+                    "fr": "Échantillon minimum : 30 fiches valides"
+                },
+                "target": 30,
+                "scope": "survey"
+            },
+            {
+                "key": "quartiers_distincts",
+                "label": {
+                    "fr": "Au moins 3 quartiers distincts par ville travaillée"
+                },
+                "target": 3,
+                "scope": "distinct",
+                "question": "quartier"
+            },
+            {
+                "key": "par_reseau",
+                "label": {
+                    "fr": "Maximum 5 personnes du même réseau"
+                },
+                "target": 5,
+                "scope": "answer",
+                "question": "reseau_origine",
+                "max": true
+            }
+        ],
+        "kpis": [
+            {
+                "key": "taux_acompte",
+                "label": {
+                    "fr": "% d'acompte / fiches valides"
+                },
+                "numerator": {
+                    "==": [
+                        {
+                            "var": "acompte_verse"
+                        },
+                        true
+                    ]
+                },
+                "denominator": "valid",
+                "format": "percent"
+            },
+            {
+                "key": "taux_retrait",
+                "label": {
+                    "fr": "% de retrait ≤ 7 j parmi les acomptes"
+                },
+                "numerator": {
+                    "==": [
+                        {
+                            "var": "j7_retire"
+                        },
+                        "oui"
+                    ]
+                },
+                "denominator": {
+                    "==": [
+                        {
+                            "var": "acompte_verse"
+                        },
+                        true
+                    ]
+                },
+                "format": "percent"
+            },
+            {
+                "key": "taux_activation_j14",
+                "label": {
+                    "fr": "% activé à J+14 parmi les appareils retirés"
+                },
+                "numerator": {
+                    "==": [
+                        {
+                            "var": "j14_active"
+                        },
+                        "oui"
+                    ]
+                },
+                "denominator": {
+                    "==": [
+                        {
+                            "var": "j7_retire"
+                        },
+                        "oui"
+                    ]
+                },
+                "format": "percent"
+            },
+            {
+                "key": "taux_hors_cible",
+                "label": {
+                    "fr": "% hors cible / contacts"
+                },
+                "numerator": {
+                    "==": [
+                        {
+                            "var": "_status"
+                        },
+                        "screened_out"
+                    ]
+                },
+                "denominator": "all",
+                "format": "percent"
+            }
+        ],
+        "geo": {
+            "capture": "end",
+            "required": false,
+            "accuracy_max_m": 100
+        },
+        "timing": {
+            "min_duration_seconds": 600,
+            "max_duration_seconds": 1080
+        },
+        "duplicate_keys": [
+            "num_whatsapp"
+        ],
+        "pagination": "section",
+        "allow_public_link": true,
+        "enumerator_can_edit_after_submit": true,
+        "followup_contact_keys": [
+            "num_whatsapp"
+        ]
+    },
+    "choice_lists": {
+        "oui_non": [
+            {
+                "name": "oui",
+                "label": {
+                    "fr": "Oui"
+                }
+            },
+            {
+                "name": "non",
+                "label": {
+                    "fr": "Non"
+                }
+            }
+        ],
+        "oui_non_na": [
+            {
+                "name": "oui",
+                "label": {
+                    "fr": "Oui"
+                }
+            },
+            {
+                "name": "non",
+                "label": {
+                    "fr": "Non"
+                }
+            },
+            {
+                "name": "na",
+                "label": {
+                    "fr": "N/A"
+                }
+            }
+        ],
+        "villes": [
+            {
+                "name": "douala",
+                "label": {
+                    "fr": "Douala"
+                },
+                "abbr": "DLA"
+            },
+            {
+                "name": "yaounde",
+                "label": {
+                    "fr": "Yaoundé"
+                },
+                "abbr": "YDE"
+            }
+        ],
+        "quartiers": [
+            {
+                "name": "bonapriso",
+                "label": {
+                    "fr": "Bonapriso"
+                },
+                "abbr": "BNP",
+                "filter": {
+                    "ville": "douala"
+                }
+            },
+            {
+                "name": "bonanjo",
+                "label": {
+                    "fr": "Bonanjo"
+                },
+                "abbr": "BNJ",
+                "filter": {
+                    "ville": "douala"
+                }
+            },
+            {
+                "name": "akwa",
+                "label": {
+                    "fr": "Akwa"
+                },
+                "abbr": "AKW",
+                "filter": {
+                    "ville": "douala"
+                }
+            },
+            {
+                "name": "deido",
+                "label": {
+                    "fr": "Deido"
+                },
+                "abbr": "DEI",
+                "filter": {
+                    "ville": "douala"
+                }
+            },
+            {
+                "name": "bali",
+                "label": {
+                    "fr": "Bali"
+                },
+                "abbr": "BAL",
+                "filter": {
+                    "ville": "douala"
+                }
+            },
+            {
+                "name": "makepe",
+                "label": {
+                    "fr": "Makepe"
+                },
+                "abbr": "MKP",
+                "filter": {
+                    "ville": "douala"
+                }
+            },
+            {
+                "name": "logpom",
+                "label": {
+                    "fr": "Logpom"
+                },
+                "abbr": "LGP",
+                "filter": {
+                    "ville": "douala"
+                }
+            },
+            {
+                "name": "bonamoussadi",
+                "label": {
+                    "fr": "Bonamoussadi"
+                },
+                "abbr": "BMP",
+                "filter": {
+                    "ville": "douala"
+                }
+            },
+            {
+                "name": "kotto",
+                "label": {
+                    "fr": "Kotto"
+                },
+                "abbr": "KOT",
+                "filter": {
+                    "ville": "douala"
+                }
+            },
+            {
+                "name": "pk14",
+                "label": {
+                    "fr": "PK14"
+                },
+                "abbr": "PK1",
+                "filter": {
+                    "ville": "douala"
+                }
+            },
+            {
+                "name": "yassa",
+                "label": {
+                    "fr": "Yassa"
+                },
+                "abbr": "YAS",
+                "filter": {
+                    "ville": "douala"
+                }
+            },
+            {
+                "name": "bastos",
+                "label": {
+                    "fr": "Bastos"
+                },
+                "abbr": "BAS",
+                "filter": {
+                    "ville": "yaounde"
+                }
+            }
+        ],
+        "lieux_enrolement": [
+            {
+                "name": "rue",
+                "label": {
+                    "fr": "Rue / porte"
+                }
+            },
+            {
+                "name": "sortie_ecole",
+                "label": {
+                    "fr": "Sortie d'école"
+                }
+            },
+            {
+                "name": "culte",
+                "label": {
+                    "fr": "Culte"
+                }
+            },
+            {
+                "name": "marche",
+                "label": {
+                    "fr": "Marché"
+                }
+            },
+            {
+                "name": "connaissance",
+                "label": {
+                    "fr": "Connaissance"
+                }
+            },
+            {
+                "name": "autre",
+                "label": {
+                    "fr": "Autre"
+                }
+            }
+        ],
+        "signaux_capacite": [
+            {
+                "name": "nounou",
+                "label": {
+                    "fr": "Aide à domicile / nounou / baby-sitter régulière"
+                }
+            },
+            {
+                "name": "chauffeur",
+                "label": {
+                    "fr": "Chauffeur (même occasionnel)"
+                }
+            },
+            {
+                "name": "ecole_privee",
+                "label": {
+                    "fr": "Au moins un enfant en école privée (hors maternelle publique / école de quartier gratuite)"
+                }
+            },
+            {
+                "name": "vehicule",
+                "label": {
+                    "fr": "Véhicule du foyer (voiture ou moto personnelle)"
+                }
+            },
+            {
+                "name": "aucune",
+                "label": {
+                    "fr": "Aucune des quatre"
+                }
+            }
+        ],
+        "sexes": [
+            {
+                "name": "f",
+                "label": {
+                    "fr": "F"
+                }
+            },
+            {
+                "name": "h",
+                "label": {
+                    "fr": "H"
+                }
+            }
+        ],
+        "vehicule_foyer": [
+            {
+                "name": "voiture",
+                "label": {
+                    "fr": "Voiture"
+                }
+            },
+            {
+                "name": "moto",
+                "label": {
+                    "fr": "Moto"
+                }
+            },
+            {
+                "name": "non",
+                "label": {
+                    "fr": "Non"
+                }
+            }
+        ],
+        "smartphones": [
+            {
+                "name": "android",
+                "label": {
+                    "fr": "Android"
+                }
+            },
+            {
+                "name": "iphone",
+                "label": {
+                    "fr": "iPhone"
+                }
+            },
+            {
+                "name": "les_deux",
+                "label": {
+                    "fr": "Les deux"
+                }
+            }
+        ],
+        "transports": [
+            {
+                "name": "pied_bus",
+                "label": {
+                    "fr": "À pied / bus scolaire"
+                }
+            },
+            {
+                "name": "taxi_moto",
+                "label": {
+                    "fr": "Taxi / moto-taxi"
+                }
+            },
+            {
+                "name": "chauffeur_foyer",
+                "label": {
+                    "fr": "Chauffeur du foyer"
+                }
+            },
+            {
+                "name": "parent_depose",
+                "label": {
+                    "fr": "Parent qui dépose"
+                }
+            },
+            {
+                "name": "nounou_aide",
+                "label": {
+                    "fr": "Nounou / aide"
+                }
+            },
+            {
+                "name": "autre",
+                "label": {
+                    "fr": "Autre"
+                }
+            }
+        ],
+        "moyens_verification": [
+            {
+                "name": "appel_relais",
+                "label": {
+                    "fr": "J'appelle la nounou / le chauffeur / l'enseignant"
+                }
+            },
+            {
+                "name": "whatsapp_enfant",
+                "label": {
+                    "fr": "WhatsApp / appel à l'enfant"
+                }
+            },
+            {
+                "name": "pas_de_verification",
+                "label": {
+                    "fr": "Je ne vérifie pas vraiment"
+                }
+            },
+            {
+                "name": "autre",
+                "label": {
+                    "fr": "Autre"
+                }
+            }
+        ],
+        "budget_4000": [
+            {
+                "name": "oui",
+                "label": {
+                    "fr": "Oui"
+                }
+            },
+            {
+                "name": "non",
+                "label": {
+                    "fr": "Non"
+                }
+            },
+            {
+                "name": "refus",
+                "label": {
+                    "fr": "Je ne désire pas répondre"
+                }
+            }
+        ],
+        "cotation_reaction": [
+            {
+                "name": "interet_spontane",
+                "label": {
+                    "fr": "Intérêt spontané"
+                }
+            },
+            {
+                "name": "curiosite_polie",
+                "label": {
+                    "fr": "Curiosité polie"
+                }
+            },
+            {
+                "name": "scepticisme",
+                "label": {
+                    "fr": "Scepticisme"
+                }
+            },
+            {
+                "name": "rejet_net",
+                "label": {
+                    "fr": "Rejet net"
+                }
+            },
+            {
+                "name": "incomprehension",
+                "label": {
+                    "fr": "Incompréhension"
+                }
+            }
+        ],
+        "themes_freins": [
+            {
+                "name": "prix_abo",
+                "label": {
+                    "fr": "Prix / abo"
+                }
+            },
+            {
+                "name": "confiance_donnees",
+                "label": {
+                    "fr": "Confiance / données"
+                }
+            },
+            {
+                "name": "enfant_ne_portera_pas",
+                "label": {
+                    "fr": "L'enfant ne portera pas"
+                }
+            },
+            {
+                "name": "casse_perte",
+                "label": {
+                    "fr": "Peur de casser / perdre"
+                }
+            },
+            {
+                "name": "reseau_batterie",
+                "label": {
+                    "fr": "Réseau / batterie"
+                }
+            },
+            {
+                "name": "inutile_je_gere",
+                "label": {
+                    "fr": "Inutile (je gère déjà)"
+                }
+            },
+            {
+                "name": "decideur_absent",
+                "label": {
+                    "fr": "Décideur absent"
+                }
+            },
+            {
+                "name": "marque_inconnue",
+                "label": {
+                    "fr": "Marque inconnue / arnaque"
+                }
+            },
+            {
+                "name": "autre",
+                "label": {
+                    "fr": "Autre"
+                }
+            }
+        ],
+        "emplacements": [
+            {
+                "name": "cartable",
+                "label": {
+                    "fr": "Dans le cartable / sac"
+                }
+            },
+            {
+                "name": "sur_enfant",
+                "label": {
+                    "fr": "Sur l'enfant (tour de cou)"
+                }
+            },
+            {
+                "name": "nounou_chauffeur",
+                "label": {
+                    "fr": "Chez la nounou / le chauffeur"
+                }
+            },
+            {
+                "name": "ne_sait_pas",
+                "label": {
+                    "fr": "Je ne sais pas"
+                }
+            }
+        ],
+        "prix_appareil": [
+            {
+                "name": "normal",
+                "label": {
+                    "fr": "C'est normal"
+                }
+            },
+            {
+                "name": "cher_acceptable",
+                "label": {
+                    "fr": "C'est cher mais acceptable"
+                }
+            },
+            {
+                "name": "trop_cher",
+                "label": {
+                    "fr": "C'est trop cher"
+                }
+            }
+        ],
+        "prix_rupture_reponse": [
+            {
+                "name": "montant",
+                "label": {
+                    "fr": "Donne un montant"
+                }
+            },
+            {
+                "name": "ne_sait_pas",
+                "label": {
+                    "fr": "Ne sait pas / refuse de chiffrer"
+                }
+            }
+        ],
+        "abonnements_refus": [
+            {
+                "name": "2000",
+                "label": {
+                    "fr": "2 000 FCFA/mois"
+                }
+            },
+            {
+                "name": "3000",
+                "label": {
+                    "fr": "3 000 FCFA/mois"
+                }
+            },
+            {
+                "name": "4000",
+                "label": {
+                    "fr": "4 000 FCFA/mois"
+                }
+            },
+            {
+                "name": "4500",
+                "label": {
+                    "fr": "4 500 FCFA/mois"
+                }
+            },
+            {
+                "name": "5000",
+                "label": {
+                    "fr": "5 000 FCFA/mois"
+                }
+            },
+            {
+                "name": "6000_plus",
+                "label": {
+                    "fr": "6 000 FCFA/mois ou plus"
+                }
+            },
+            {
+                "name": "autre",
+                "label": {
+                    "fr": "Autre montant"
+                }
+            }
+        ],
+        "options_ab": [
+            {
+                "name": "option_a",
+                "label": {
+                    "fr": "Option A — appareil 20 000 FCFA + 3 000 FCFA / mois, sans engagement long"
+                }
+            },
+            {
+                "name": "option_b",
+                "label": {
+                    "fr": "Option B — appareil 5 000 FCFA + 6 000 FCFA / mois, engagement 12 mois"
+                }
+            },
+            {
+                "name": "autre",
+                "label": {
+                    "fr": "Autre option"
+                }
+            }
+        ],
+        "moyens_paiement": [
+            {
+                "name": "orange_money",
+                "label": {
+                    "fr": "Orange Money"
+                }
+            },
+            {
+                "name": "mtn_momo",
+                "label": {
+                    "fr": "MTN MoMo"
+                }
+            },
+            {
+                "name": "autre",
+                "label": {
+                    "fr": "Autres"
+                }
+            }
+        ],
+        "frequences_paiement": [
+            {
+                "name": "mensuel",
+                "label": {
+                    "fr": "Payer chaque mois"
+                }
+            },
+            {
+                "name": "trimestre",
+                "label": {
+                    "fr": "3 mois d'avance"
+                }
+            },
+            {
+                "name": "semestre_reduction",
+                "label": {
+                    "fr": "6 mois d'avance avec une petite réduction"
+                }
+            },
+            {
+                "name": "annuel",
+                "label": {
+                    "fr": "L'année d'avance"
+                }
+            },
+            {
+                "name": "autre",
+                "label": {
+                    "fr": "Autres"
+                }
+            }
+        ],
+        "canaux_rappel": [
+            {
+                "name": "whatsapp",
+                "label": {
+                    "fr": "WhatsApp"
+                }
+            },
+            {
+                "name": "sms",
+                "label": {
+                    "fr": "SMS"
+                }
+            },
+            {
+                "name": "appel",
+                "label": {
+                    "fr": "Appel"
+                }
+            },
+            {
+                "name": "notification",
+                "label": {
+                    "fr": "Notification dans l'appli"
+                }
+            },
+            {
+                "name": "autre",
+                "label": {
+                    "fr": "Autres"
+                }
+            }
+        ],
+        "gene_position": [
+            {
+                "name": "oui_beaucoup",
+                "label": {
+                    "fr": "Oui, beaucoup"
+                }
+            },
+            {
+                "name": "un_peu",
+                "label": {
+                    "fr": "Un peu"
+                }
+            },
+            {
+                "name": "non_securite",
+                "label": {
+                    "fr": "Non, si c'est pour sa sécurité"
+                }
+            },
+            {
+                "name": "jamais_pense",
+                "label": {
+                    "fr": "Je n'y avais pas pensé"
+                }
+            }
+        ],
+        "marque_camerounaise": [
+            {
+                "name": "rassure",
+                "label": {
+                    "fr": "Ça me rassure (proche, joignable)"
+                }
+            },
+            {
+                "name": "inquiete",
+                "label": {
+                    "fr": "Ça m'inquiète (et si elle disparaît / arnaque)"
+                }
+            },
+            {
+                "name": "indifferent",
+                "label": {
+                    "fr": "Indifférent — je juge le produit"
+                }
+            },
+            {
+                "name": "marque_etrangere",
+                "label": {
+                    "fr": "Je préférerais une marque étrangère connue"
+                }
+            }
+        ],
+        "solutions_connues": [
+            {
+                "name": "non",
+                "label": {
+                    "fr": "Non"
+                }
+            },
+            {
+                "name": "montre_telephone",
+                "label": {
+                    "fr": "Montre / téléphone enfant"
+                }
+            },
+            {
+                "name": "localisation_whatsapp",
+                "label": {
+                    "fr": "Localisation WhatsApp"
+                }
+            },
+            {
+                "name": "traceur_voiture",
+                "label": {
+                    "fr": "Traceur voiture"
+                }
+            },
+            {
+                "name": "autre",
+                "label": {
+                    "fr": "Autre"
+                }
+            }
+        ],
+        "decisions": [
+            {
+                "name": "oui_acompte",
+                "label": {
+                    "fr": "OUI — verse l'acompte maintenant"
+                }
+            },
+            {
+                "name": "oui_verbal",
+                "label": {
+                    "fr": "OUI verbal seulement (« je n'ai pas MoMo / je paie ce soir ») → compter NON, noter le prétexte"
+                }
+            },
+            {
+                "name": "non_clair",
+                "label": {
+                    "fr": "NON clair"
+                }
+            },
+            {
+                "name": "hesite_non",
+                "label": {
+                    "fr": "Hésite longtemps puis non"
+                }
+            },
+            {
+                "name": "hesite_oui_acompte",
+                "label": {
+                    "fr": "Hésite longtemps puis oui + paiement"
+                }
+            }
+        ],
+        "operateurs_momo": [
+            {
+                "name": "om",
+                "label": {
+                    "fr": "OM (Orange Money)"
+                }
+            },
+            {
+                "name": "momo",
+                "label": {
+                    "fr": "MoMo (MTN)"
+                }
+            }
+        ],
+        "themes_refus": [
+            {
+                "name": "argent_maintenant",
+                "label": {
+                    "fr": "Pas l'argent maintenant"
+                }
+            },
+            {
+                "name": "conjoint",
+                "label": {
+                    "fr": "Doit en parler au conjoint"
+                }
+            },
+            {
+                "name": "pas_convaincu",
+                "label": {
+                    "fr": "Pas convaincu du produit"
+                }
+            },
+            {
+                "name": "plus_tard",
+                "label": {
+                    "fr": "Pas le moment / « plus tard »"
+                }
+            },
+            {
+                "name": "retrait_loin",
+                "label": {
+                    "fr": "Lieu de retrait trop loin"
+                }
+            },
+            {
+                "name": "mefiance_acompte",
+                "label": {
+                    "fr": "Méfiance acompte / arnaque"
+                }
+            },
+            {
+                "name": "pas_se_deplacer",
+                "label": {
+                    "fr": "Ne veut pas se déplacer"
+                }
+            },
+            {
+                "name": "enfant_ne_portera",
+                "label": {
+                    "fr": "Enfant ne portera pas"
+                }
+            },
+            {
+                "name": "prix_global",
+                "label": {
+                    "fr": "Prix global trop élevé"
+                }
+            },
+            {
+                "name": "autre",
+                "label": {
+                    "fr": "Autre"
+                }
+            }
+        ],
+        "observations_enqueteur": [
+            {
+                "name": "ouvert_momo",
+                "label": {
+                    "fr": "A ouvert MoMo / cherché l'argent"
+                }
+            },
+            {
+                "name": "telephone_puis_recule",
+                "label": {
+                    "fr": "A sorti le téléphone puis a reculé"
+                }
+            },
+            {
+                "name": "regarde_tiers",
+                "label": {
+                    "fr": "A regardé le conjoint / un tiers"
+                }
+            },
+            {
+                "name": "ri_minimise",
+                "label": {
+                    "fr": "A ri / minimisé"
+                }
+            },
+            {
+                "name": "gene_dire_non",
+                "label": {
+                    "fr": "Visiblement gêné(e) de dire non"
+                }
+            }
+        ],
+        "chaleur_oui": [
+            {
+                "name": "chaud",
+                "label": {
+                    "fr": "Chaud"
+                }
+            },
+            {
+                "name": "poli",
+                "label": {
+                    "fr": "Poli"
+                }
+            },
+            {
+                "name": "froid",
+                "label": {
+                    "fr": "Froid / mécanique"
+                }
+            }
+        ]
+    },
+    "sections": [
+        {
+            "key": "A",
+            "label": {
+                "fr": "A. En-tête enquêteur (avant de commencer)"
+            },
+            "description": {
+                "fr": "Une personne = une fiche. Toujours le même code sur la fiche, le reçu MoMo et le tableau de suivi."
+            },
+            "items": [
+                {
+                    "key": "regles_enqueteur",
+                    "type": "note",
+                    "audience": "enumerator",
+                    "style": "warning",
+                    "label": {
+                        "fr": "À relire chaque matin. Présenter le concept tel quel, montrer l'appareil, puis se taire. Noter les réponses ouvertes mot pour mot : pas de résumé. Ne jamais convaincre, corriger une objection ni inventer une promo. Ne pas recruter plus de 5 personnes du même réseau. Vérifier le filtre avant de s'asseoir."
+                    }
+                },
+                {
+                    "key": "date_entretien",
+                    "type": "date",
+                    "label": {
+                        "fr": "Date de l'entretien"
+                    },
+                    "required": true,
+                    "default": {
+                        "today": []
+                    }
+                },
+                {
+                    "key": "ville",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "Ville"
+                    },
+                    "required": true,
+                    "choices": "villes",
+                    "appearance": "buttons"
+                },
+                {
+                    "key": "quartier",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "Quartier"
+                    },
+                    "required": true,
+                    "choices": "quartiers",
+                    "appearance": "dropdown",
+                    "hint": {
+                        "fr": "Mix volontaire : ne pas tout prendre dans Makepe / Logpom."
+                    }
+                },
+                {
+                    "key": "lieu_precis",
+                    "type": "text",
+                    "label": {
+                        "fr": "Lieu (repère précis du point d'enquête)"
+                    },
+                    "max_length": 120
+                },
+                {
+                    "key": "lieu_enrolement",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "Lieu d'enrôlement du répondant"
+                    },
+                    "required": true,
+                    "choices": "lieux_enrolement",
+                    "other": {
+                        "choice": "autre",
+                        "label": {
+                            "fr": "Précisez le lieu d'enrôlement"
+                        }
+                    }
+                },
+                {
+                    "key": "reseau_origine",
+                    "type": "text",
+                    "label": {
+                        "fr": "Réseau d'origine (nom du relais, sinon « direct »)"
+                    },
+                    "required": true,
+                    "default": "direct",
+                    "max_length": 60,
+                    "hint": {
+                        "fr": "Maximum 5 personnes du même réseau / même église / même école / même famille élargie."
+                    }
+                },
+                {
+                    "key": "numero_fiche",
+                    "type": "calculate",
+                    "label": {
+                        "fr": "Numéro de fiche (compteur du code fiche)"
+                    },
+                    "expression": {
+                        "var": "_seq"
+                    }
+                }
+            ]
+        },
+        {
+            "key": "B",
+            "label": {
+                "fr": "B. Introduction — 90 secondes. Si KO, on arrête."
+            },
+            "items": [
+                {
+                    "key": "script_intro",
+                    "type": "note",
+                    "audience": "respondent",
+                    "style": "script",
+                    "label": {
+                        "fr": "« Bonjour Madame, Monsieur, je me présente : [Prénom Nom], représentant Honowa Tech. Nous menons actuellement une enquête sur la sécurité des enfants en milieu urbain dans le cadre du projet MunaGo. MunaGo est un service d'abonnement proposant un traceur GPS destiné aux familles vivant en ville. Cette entrevue durera environ quinze minutes. Acceptez-vous d'y participer ? »"
+                    }
+                },
+                {
+                    "key": "consentement",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "Acceptez-vous de participer ?"
+                    },
+                    "required": true,
+                    "choices": "oui_non"
+                },
+                {
+                    "key": "stop_refus",
+                    "type": "stop",
+                    "label": {
+                        "fr": "Fin de l'entretien"
+                    },
+                    "message": {
+                        "fr": "La personne refuse de participer. Remercier et partir, sans insister."
+                    },
+                    "relevant": {
+                        "==": [
+                            {
+                                "var": "consentement"
+                            },
+                            "non"
+                        ]
+                    }
+                },
+                {
+                    "key": "deja_contacte",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "B2. Avez-vous déjà été contacté au sujet du projet MunaGo ?"
+                    },
+                    "required": true,
+                    "choices": "oui_non"
+                },
+                {
+                    "key": "stop_deja_contacte",
+                    "type": "stop",
+                    "label": {
+                        "fr": "Fin de l'entretien — déjà contacté"
+                    },
+                    "message": {
+                        "fr": "Famille déjà vue au pilote ou déjà contactée sur WhatsApp pour MunaGo. Remercier et partir."
+                    }
+                },
+                {
+                    "key": "f1_enfant_scolarise",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "F1. Avez-vous au moins un enfant de 3 à 18 ans scolarisé ?"
+                    },
+                    "required": true,
+                    "choices": "oui_non"
+                },
+                {
+                    "key": "stop_pas_enfant",
+                    "type": "stop",
+                    "label": {
+                        "fr": "Hors cible — pas d'enfant scolarisé"
+                    },
+                    "message": {
+                        "fr": "Aucun enfant de 3 à 18 ans scolarisé : noter le motif, remercier et partir."
+                    },
+                    "relevant": {
+                        "==": [
+                            {
+                                "var": "f1_enfant_scolarise"
+                            },
+                            "non"
+                        ]
+                    }
+                },
+                {
+                    "key": "f2_capacite",
+                    "type": "select_multiple",
+                    "label": {
+                        "fr": "F2. Parmi ces situations, laquelle est vraie chez vous ? (Au moins une obligatoire)"
+                    },
+                    "required": true,
+                    "choices": "signaux_capacite",
+                    "exclusive": [
+                        "aucune"
+                    ],
+                    "min_selected": 1
+                },
+                {
+                    "key": "stop_hors_cible",
+                    "type": "stop",
+                    "label": {
+                        "fr": "Hors cible — aucun signal de capacité"
+                    },
+                    "message": {
+                        "fr": "Aucun des signaux de capacité : noter le motif et remercier."
+                    },
+                    "relevant": {
+                        "selected": [
+                            {
+                                "var": "f2_capacite"
+                            },
+                            "aucune"
+                        ]
+                    }
+                },
+                {
+                    "key": "nb_signaux",
+                    "type": "calculate",
+                    "label": {
+                        "fr": "Nombre de signaux de capacité"
+                    },
+                    "expression": {
+                        "count_selected": [
+                            {
+                                "var": "f2_capacite"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "resultat_filtre",
+                    "type": "calculate",
+                    "label": {
+                        "fr": "Filtre : VALIDE / HORS CIBLE"
+                    },
+                    "expression": {
+                        "if": [
+                            {
+                                "or": [
+                                    {
+                                        "==": [
+                                            {
+                                                "var": "consentement"
+                                            },
+                                            "non"
+                                        ]
+                                    },
+                                    {
+                                        "==": [
+                                            {
+                                                "var": "deja_contacte"
+                                            },
+                                            "oui"
+                                        ]
+                                    },
+                                    {
+                                        "==": [
+                                            {
+                                                "var": "f1_enfant_scolarise"
+                                            },
+                                            "non"
+                                        ]
+                                    },
+                                    {
+                                        "selected": [
+                                            {
+                                                "var": "f2_capacite"
+                                            },
+                                            "aucune"
+                                        ]
+                                    }
+                                ]
+                            },
+                            "hors_cible",
+                            "valide"
+                        ]
+                    }
+                },
+                {
+                    "key": "sexe",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "Sexe du répondant"
+                    },
+                    "required": true,
+                    "choices": "sexes",
+                    "appearance": "buttons",
+                    "tags": [
+                        "enumerator_only"
+                    ]
+                },
+                {
+                    "key": "age_approx",
+                    "type": "integer",
+                    "label": {
+                        "fr": "Âge approximatif (ans)"
+                    },
+                    "required": true,
+                    "min": 15,
+                    "max": 90,
+                    "tags": [
+                        "enumerator_only"
+                    ]
+                }
+            ]
+        },
+        {
+            "key": "C",
+            "label": {
+                "fr": "C. Profil du ménage (fermé — 2 minutes)"
+            },
+            "items": [
+                {
+                    "key": "nb_enfants_scolarises",
+                    "type": "integer",
+                    "label": {
+                        "fr": "P1. Nombre d'enfants scolarisés de 3 à 18 ans"
+                    },
+                    "required": true,
+                    "min": 1,
+                    "max": 15
+                },
+                {
+                    "key": "p1_composition",
+                    "type": "group",
+                    "label": {
+                        "fr": "P1. Composition utile"
+                    },
+                    "appearance": "matrix",
+                    "items": [
+                        {
+                            "key": "p1_ecole_privee",
+                            "type": "select_one",
+                            "label": {
+                                "fr": "École privée"
+                            },
+                            "required": true,
+                            "choices": "oui_non"
+                        },
+                        {
+                            "key": "p1_aide_nounou",
+                            "type": "select_one",
+                            "label": {
+                                "fr": "Aide / nounou"
+                            },
+                            "required": true,
+                            "choices": "oui_non"
+                        },
+                        {
+                            "key": "p1_chauffeur",
+                            "type": "select_one",
+                            "label": {
+                                "fr": "Chauffeur"
+                            },
+                            "required": true,
+                            "choices": "oui_non"
+                        }
+                    ]
+                },
+                {
+                    "key": "p1_vehicule",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "Véhicule du foyer"
+                    },
+                    "required": true,
+                    "choices": "vehicule_foyer"
+                },
+                {
+                    "key": "p2_smartphone",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "P2. Smartphone du répondant"
+                    },
+                    "required": true,
+                    "choices": "smartphones"
+                },
+                {
+                    "key": "p3_consigne",
+                    "type": "note",
+                    "audience": "enumerator",
+                    "style": "info",
+                    "label": {
+                        "fr": "P3. Quel moyen de transport les enfants utilisent-ils principalement pour se rendre sur leur lieu d'étude ? Ne considérez que les enfants de 3 à 18 ans."
+                    }
+                },
+                {
+                    "key": "p3_1_transport_aller",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "P3.1 À l'aller"
+                    },
+                    "required": true,
+                    "choices": "transports",
+                    "other": {
+                        "choice": "autre",
+                        "label": {
+                            "fr": "Précisez le moyen de transport à l'aller"
+                        }
+                    }
+                },
+                {
+                    "key": "p3_2_transport_retour",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "P3.2 Au retour"
+                    },
+                    "required": true,
+                    "choices": "transports",
+                    "other": {
+                        "choice": "autre",
+                        "label": {
+                            "fr": "Précisez le moyen de transport au retour"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "key": "D",
+            "label": {
+                "fr": "D. Situation actuelle — le problème tel qu'il le vit (3 minutes)"
+            },
+            "items": [
+                {
+                    "key": "d_consigne",
+                    "type": "note",
+                    "audience": "enumerator",
+                    "style": "warning",
+                    "label": {
+                        "fr": "Ne pas suggérer « GPS », « traceur », « kidnapping ». Laisser venir les mots. Si aucun incident : le noter explicitement, c'est un résultat."
+                    }
+                },
+                {
+                    "key": "d1_verification",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "D1. Quand vos enfants ne sont pas avec vous et que vous n'avez aucune idée du lieu où ils se trouvent (école, route, chez un proche), comment procédez-vous pour savoir où ils se trouvent concrètement ?"
+                    },
+                    "required": true,
+                    "choices": "moyens_verification",
+                    "other": {
+                        "choice": "autre",
+                        "label": {
+                            "fr": "Précisez"
+                        }
+                    }
+                },
+                {
+                    "key": "d1_precision",
+                    "type": "text",
+                    "appearance": "multiline",
+                    "label": {
+                        "fr": "D1. Précision (mots du parent)"
+                    },
+                    "hint": {
+                        "fr": "Mot pour mot. Écrire ce qu'elle a dit, pas un résumé."
+                    },
+                    "max_length": 600
+                },
+                {
+                    "key": "d2_incident",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "D2. Vous est-il déjà arrivé de ne pas savoir précisément où se trouvait l'un de vos enfants ?"
+                    },
+                    "required": true,
+                    "choices": "oui_non"
+                },
+                {
+                    "key": "d3_recit",
+                    "type": "text",
+                    "appearance": "multiline",
+                    "label": {
+                        "fr": "D3. Pourriez-vous relater la dernière occasion où vous ignoriez la localisation de l'un de vos enfants ? Que s'est-il produit par la suite ?"
+                    },
+                    "relevant": {
+                        "==": [
+                            {
+                                "var": "d2_incident"
+                            },
+                            "oui"
+                        ]
+                    },
+                    "hint": {
+                        "fr": "Récit mot pour mot. Ne pas relancer plus d'une fois."
+                    },
+                    "max_length": 1500
+                },
+                {
+                    "key": "d4_consigne",
+                    "type": "note",
+                    "audience": "enumerator",
+                    "style": "info",
+                    "label": {
+                        "fr": "Cette question mesure si 4 000 FCFA/mois est de l'argent « invisible » ou un vrai arbitrage. Noter le silence s'il y en a un."
+                    }
+                },
+                {
+                    "key": "d4_verbatim",
+                    "type": "text",
+                    "appearance": "multiline",
+                    "label": {
+                        "fr": "D4. Si vous deviez ajouter 4 000 FCFA par mois à votre budget, est-ce que cela serait une augmentation importante ? (mots exacts, silence noté)"
+                    },
+                    "max_length": 600
+                },
+                {
+                    "key": "d4_budget",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "D4. Réponse"
+                    },
+                    "required": true,
+                    "choices": "budget_4000",
+                    "other": {
+                        "choice": "autre",
+                        "label": {
+                            "fr": "Précisez"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "key": "E",
+            "label": {
+                "fr": "E. Présentation du concept — à lire tel quel"
+            },
+            "items": [
+                {
+                    "key": "e_consigne",
+                    "type": "note",
+                    "audience": "enumerator",
+                    "style": "warning",
+                    "label": {
+                        "fr": "Montrer l'appareil. Ne pas ajouter d'arguments (« c'est pour le kidnappeur », « ça marche même sans réseau »). Après la lecture : silence. On attend la première réaction."
+                    }
+                },
+                {
+                    "key": "script_concept",
+                    "type": "note",
+                    "audience": "respondent",
+                    "style": "script",
+                    "label": {
+                        "fr": "« Il s'agit d'un petit appareil que l'enfant met dans son sac à dos. Il permet de voir où se trouve l'enfant depuis votre téléphone, et de recevoir une alerte s'il sort d'une zone que vous avez définie. Vous pouvez aussi appeler l'appareil. L'appareil coûte environ 20 000 FCFA à l'achat, puis il y a un abonnement mensuel pour le service. »"
+                    }
+                },
+                {
+                    "key": "q5_reaction",
+                    "type": "text",
+                    "appearance": "multiline",
+                    "label": {
+                        "fr": "5. Qu'est-ce que vous en pensez ? (Première réaction, mot pour mot)"
+                    },
+                    "required": true,
+                    "hint": {
+                        "fr": "Écrire la phrase telle qu'elle est dite, puis coter après coup sans influencer."
+                    },
+                    "max_length": 1000,
+                    "postcode": {
+                        "choices": "cotation_reaction",
+                        "multiple": false,
+                        "label": {
+                            "fr": "Cote enquêteur après coup (ne pas lire)"
+                        }
+                    },
+                    "priority": "high"
+                },
+                {
+                    "key": "q6_freins",
+                    "type": "text",
+                    "appearance": "multiline",
+                    "label": {
+                        "fr": "6. Qu'est-ce qui vous empêcherait d'utiliser cette solution ?"
+                    },
+                    "required": true,
+                    "hint": {
+                        "fr": "Laisser un silence. Ne pas répondre à l'objection. Relancer une seule fois : « Autre chose ? »"
+                    },
+                    "max_length": 1000,
+                    "postcode": {
+                        "choices": "themes_freins",
+                        "multiple": true,
+                        "label": {
+                            "fr": "Cocher ensuite les thèmes, sans le dire à voix haute"
+                        }
+                    }
+                },
+                {
+                    "key": "q7_portera",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "7. Pensez-vous que cet enfant porterait le traqueur GPS quotidiennement ?"
+                    },
+                    "required": true,
+                    "choices": "oui_non"
+                },
+                {
+                    "key": "q7_circonstances",
+                    "type": "text",
+                    "appearance": "multiline",
+                    "label": {
+                        "fr": "7. Dans quelles circonstances pourrait-il ne pas le porter ?"
+                    },
+                    "max_length": 600
+                },
+                {
+                    "key": "q7b_emplacement",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "7b. Concrètement, où choisiriez-vous de le placer ?"
+                    },
+                    "required": true,
+                    "choices": "emplacements"
+                }
+            ]
+        },
+        {
+            "key": "F",
+            "label": {
+                "fr": "F. Prix — appareil et abonnement (3 minutes)"
+            },
+            "items": [
+                {
+                    "key": "f_consigne",
+                    "type": "note",
+                    "audience": "enumerator",
+                    "style": "info",
+                    "label": {
+                        "fr": "On cherche le point où ça casse, pas un « prix juste » théorique. Si la personne négocie, noter la négociation, ne pas accorder de rabais."
+                    }
+                },
+                {
+                    "key": "f1_prix_appareil",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "F1. À 20 000 FCFA pour l'appareil seulement, vous diriez :"
+                    },
+                    "required": true,
+                    "choices": "prix_appareil"
+                },
+                {
+                    "key": "f2_prix_reponse",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "F2. À partir de quel prix d'appareil diriez-vous clairement : « Non, ça ne vaut pas le coup » ?"
+                    },
+                    "required": true,
+                    "choices": "prix_rupture_reponse"
+                },
+                {
+                    "key": "f2_prix_rupture",
+                    "type": "currency",
+                    "label": {
+                        "fr": "F2. Montant (FCFA)"
+                    },
+                    "currency": "XAF",
+                    "decimals": 0,
+                    "min": 0,
+                    "max": 500000,
+                    "required": true,
+                    "relevant": {
+                        "==": [
+                            {
+                                "var": "f2_prix_reponse"
+                            },
+                            "montant"
+                        ]
+                    }
+                },
+                {
+                    "key": "f3_abonnement_refus",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "F3. Pour un seul abonnement, à partir de quel montant mensuel décideriez-vous de refuser, même si vous trouvez la solution intéressante ?"
+                    },
+                    "required": true,
+                    "choices": "abonnements_refus",
+                    "other": {
+                        "choice": "autre",
+                        "label": {
+                            "fr": "Précisez le montant en FCFA/mois"
+                        }
+                    }
+                },
+                {
+                    "key": "q10_option",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "10. Deux options. Laquelle choisiriez-vous — si vous deviez en choisir une ?"
+                    },
+                    "required": true,
+                    "choices": "options_ab",
+                    "other": {
+                        "choice": "autre",
+                        "label": {
+                            "fr": "Précisez l'autre option proposée par la personne"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "key": "G",
+            "label": {
+                "fr": "G. Paiement récurrent — mécanique réelle"
+            },
+            "items": [
+                {
+                    "key": "q10_moyen_paiement",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "10. Quel moyen de règlement vous conviendrait le mieux ?"
+                    },
+                    "required": true,
+                    "choices": "moyens_paiement",
+                    "other": {
+                        "choice": "autre",
+                        "label": {
+                            "fr": "Précisez le moyen de règlement"
+                        }
+                    }
+                },
+                {
+                    "key": "q11_frequence",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "11. Si vous aviez le choix, vous préféreriez :"
+                    },
+                    "required": true,
+                    "choices": "frequences_paiement",
+                    "other": {
+                        "choice": "autre",
+                        "label": {
+                            "fr": "Précisez"
+                        }
+                    }
+                },
+                {
+                    "key": "q11b_canal_rappel",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "11b. Par quel canal de communication préféreriez-vous recevoir un rappel de paiement ?"
+                    },
+                    "required": true,
+                    "choices": "canaux_rappel",
+                    "other": {
+                        "choice": "autre",
+                        "label": {
+                            "fr": "Précisez le canal"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "key": "H",
+            "label": {
+                "fr": "H. Confiance et marque (2 minutes)"
+            },
+            "items": [
+                {
+                    "key": "q12_position_permanente",
+                    "type": "likert",
+                    "label": {
+                        "fr": "12. Est-ce que ça vous dérange qu'une société connaisse la position de votre enfant en permanence ?"
+                    },
+                    "required": true,
+                    "choices": "gene_position"
+                },
+                {
+                    "key": "q12_conditions",
+                    "type": "text",
+                    "appearance": "multiline",
+                    "label": {
+                        "fr": "12. Qu'est-ce qu'il faudrait pour que vous soyez à l'aise ? (mots exacts)"
+                    },
+                    "max_length": 600
+                },
+                {
+                    "key": "q12b_societe_camerounaise",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "12b. Cette société est camerounaise, encore peu connue. Ça change quelque chose ?"
+                    },
+                    "required": true,
+                    "choices": "marque_camerounaise"
+                },
+                {
+                    "key": "q12c_solution_connue",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "12c. Connaissez-vous déjà un objet ou une appli qui fait à peu près ça ?"
+                    },
+                    "required": true,
+                    "choices": "solutions_connues",
+                    "other": {
+                        "choice": "autre",
+                        "label": {
+                            "fr": "Précisez"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "key": "T",
+            "label": {
+                "fr": "Test d'engagement — la seule question qui compte vraiment"
+            },
+            "description": {
+                "fr": "C'est ici que se joue la valeur de l'enquête. Une seule proposition, pas d'alternative. Puis silence."
+            },
+            "items": [
+                {
+                    "key": "t_consigne",
+                    "type": "note",
+                    "audience": "enumerator",
+                    "style": "warning",
+                    "label": {
+                        "fr": "Une seule proposition. Pas d'alternative (« on peut livrer », « vous payez demain », « je reviens samedi »). Puis silence. Proposer l'acompte une seule fois et accepter le non."
+                    }
+                },
+                {
+                    "key": "script_acompte",
+                    "type": "note",
+                    "audience": "respondent",
+                    "style": "script",
+                    "label": {
+                        "fr": "« Nous allons mettre les premiers appareils à disposition. Si vous voulez en réserver un, vous versez 5 000 FCFA maintenant par Mobile Money. C'est remboursable à tout moment, et ça se déduit du prix de l'appareil. Vous viendrez le récupérer à [LIEU DU POINT DE RETRAIT] dans les 7 jours. Est-ce que vous voulez réserver ? »"
+                    }
+                },
+                {
+                    "key": "point_retrait",
+                    "type": "text",
+                    "label": {
+                        "fr": "Point de retrait annoncé aujourd'hui"
+                    },
+                    "required": true,
+                    "max_length": 120
+                },
+                {
+                    "key": "temps_trajet_min",
+                    "type": "integer",
+                    "label": {
+                        "fr": "Quartier du point / temps de trajet estimé par la personne (minutes)"
+                    },
+                    "min": 0,
+                    "max": 240
+                },
+                {
+                    "key": "q13_decision",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "13. Décision"
+                    },
+                    "required": true,
+                    "choices": "decisions"
+                },
+                {
+                    "key": "acompte_verse",
+                    "type": "calculate",
+                    "label": {
+                        "fr": "Acompte versé (calculé)"
+                    },
+                    "expression": {
+                        "or": [
+                            {
+                                "==": [
+                                    {
+                                        "var": "q13_decision"
+                                    },
+                                    "oui_acompte"
+                                ]
+                            },
+                            {
+                                "==": [
+                                    {
+                                        "var": "q13_decision"
+                                    },
+                                    "hesite_oui_acompte"
+                                ]
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "q13_pretexte",
+                    "type": "text",
+                    "appearance": "multiline",
+                    "label": {
+                        "fr": "13. Prétexte du oui verbal (mots exacts)"
+                    },
+                    "relevant": {
+                        "==": [
+                            {
+                                "var": "q13_decision"
+                            },
+                            "oui_verbal"
+                        ]
+                    },
+                    "max_length": 400
+                },
+                {
+                    "key": "montant_recu",
+                    "type": "currency",
+                    "label": {
+                        "fr": "Montant reçu (FCFA)"
+                    },
+                    "currency": "XAF",
+                    "decimals": 0,
+                    "min": 0,
+                    "required": true,
+                    "relevant": {
+                        "==": [
+                            {
+                                "var": "acompte_verse"
+                            },
+                            true
+                        ]
+                    },
+                    "constraint": {
+                        ">=": [
+                            {
+                                "var": "montant_recu"
+                            },
+                            1000
+                        ]
+                    },
+                    "constraint_message": {
+                        "fr": "L'acompte annoncé est de 5 000 FCFA ; en dessous de 1 000 FCFA, ce n'est pas un acompte."
+                    }
+                },
+                {
+                    "key": "operateur_momo",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "Opérateur"
+                    },
+                    "required": true,
+                    "choices": "operateurs_momo",
+                    "relevant": {
+                        "==": [
+                            {
+                                "var": "acompte_verse"
+                            },
+                            true
+                        ]
+                    }
+                },
+                {
+                    "key": "reference_momo",
+                    "type": "text",
+                    "label": {
+                        "fr": "Réf. / heure de la transaction"
+                    },
+                    "required": true,
+                    "relevant": {
+                        "==": [
+                            {
+                                "var": "acompte_verse"
+                            },
+                            true
+                        ]
+                    },
+                    "max_length": 60
+                },
+                {
+                    "key": "num_whatsapp",
+                    "type": "text",
+                    "label": {
+                        "fr": "N° WhatsApp (si acompte)"
+                    },
+                    "format": "phone",
+                    "tags": [
+                        "pii"
+                    ],
+                    "relevant": {
+                        "==": [
+                            {
+                                "var": "acompte_verse"
+                            },
+                            true
+                        ]
+                    },
+                    "constraint": {
+                        "regex": [
+                            {
+                                "var": "num_whatsapp"
+                            },
+                            "^6[0-9]{8}$"
+                        ]
+                    },
+                    "constraint_message": {
+                        "fr": "Numéro camerounais à 9 chiffres commençant par 6."
+                    }
+                },
+                {
+                    "key": "nom_compte_momo",
+                    "type": "text",
+                    "label": {
+                        "fr": "Nom sur le compte MoMo"
+                    },
+                    "tags": [
+                        "pii"
+                    ],
+                    "relevant": {
+                        "==": [
+                            {
+                                "var": "acompte_verse"
+                            },
+                            true
+                        ]
+                    },
+                    "max_length": 80
+                },
+                {
+                    "key": "date_limite_retrait",
+                    "type": "date",
+                    "label": {
+                        "fr": "Date limite de retrait (J+7)"
+                    },
+                    "relevant": {
+                        "==": [
+                            {
+                                "var": "acompte_verse"
+                            },
+                            true
+                        ]
+                    },
+                    "hint": {
+                        "fr": "Jour J + 7 : le rappeler à voix haute et l'écrire sur le papier remis."
+                    }
+                },
+                {
+                    "key": "photo_recu_momo",
+                    "type": "photo",
+                    "source": "camera",
+                    "label": {
+                        "fr": "Photo du reçu MoMo + code fiche"
+                    },
+                    "relevant": {
+                        "==": [
+                            {
+                                "var": "acompte_verse"
+                            },
+                            true
+                        ]
+                    }
+                },
+                {
+                    "key": "q14_motif",
+                    "type": "text",
+                    "appearance": "multiline",
+                    "label": {
+                        "fr": "14. Si NON — pourquoi ?"
+                    },
+                    "relevant": {
+                        "==": [
+                            {
+                                "var": "acompte_verse"
+                            },
+                            false
+                        ]
+                    },
+                    "required": true,
+                    "hint": {
+                        "fr": "Mots exacts. Relance unique autorisée : « C'est surtout ça, ou il y a autre chose ? »"
+                    },
+                    "max_length": 1000,
+                    "postcode": {
+                        "choices": "themes_refus",
+                        "multiple": false,
+                        "label": {
+                            "fr": "Thème principal du refus (cocher un seul)"
+                        }
+                    }
+                },
+                {
+                    "key": "souhait_sans_acompte",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "La personne veut l'appareil sans verser d'acompte ?"
+                    },
+                    "choices": "oui_non",
+                    "relevant": {
+                        "==": [
+                            {
+                                "var": "acompte_verse"
+                            },
+                            false
+                        ]
+                    },
+                    "hint": {
+                        "fr": "Noter le souhait, ne pas céder — cela viderait le test."
+                    }
+                },
+                {
+                    "key": "q15_observation",
+                    "type": "select_multiple",
+                    "label": {
+                        "fr": "15. Observation enquêteur (ne pas lire)"
+                    },
+                    "choices": "observations_enqueteur",
+                    "appearance": "checkbox",
+                    "tags": [
+                        "enumerator_only"
+                    ]
+                },
+                {
+                    "key": "q15_chaleur_oui",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "Le « oui » verbal avant l'acompte était :"
+                    },
+                    "choices": "chaleur_oui",
+                    "appearance": "buttons",
+                    "tags": [
+                        "enumerator_only"
+                    ]
+                }
+            ]
+        }
+    ],
+    "follow_up_stages": [
+        {
+            "key": "j4",
+            "label": {
+                "fr": "J+4 — rappel WhatsApp unique"
+            },
+            "description": {
+                "fr": "UN seul message WhatsApp, texte fixe. Pas d'appel, pas de second message, pas de « vous venez quand ? »."
+            },
+            "due_offset_days": 4,
+            "window_days": 2,
+            "channel": "whatsapp",
+            "relevant": {
+                "==": [
+                    {
+                        "var": "acompte_verse"
+                    },
+                    true
+                ]
+            },
+            "items": [
+                {
+                    "key": "j4_script",
+                    "type": "note",
+                    "audience": "enumerator",
+                    "style": "script",
+                    "label": {
+                        "fr": "« Bonjour, rappel : votre appareil MunaGo est à retirer à ${point_retrait} avant le ${date_limite_retrait}. Cordialement. »"
+                    }
+                },
+                {
+                    "key": "j4_rappel_envoye",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "Rappel J+4 envoyé ?"
+                    },
+                    "required": true,
+                    "choices": "oui_non"
+                },
+                {
+                    "key": "j4_date_envoi",
+                    "type": "date",
+                    "label": {
+                        "fr": "Date d'envoi du rappel"
+                    },
+                    "relevant": {
+                        "==": [
+                            {
+                                "var": "j4_rappel_envoye"
+                            },
+                            "oui"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "key": "j7",
+            "label": {
+                "fr": "J+7 — clôture du retrait"
+            },
+            "description": {
+                "fr": "Clôturer : retiré O/N. Si non : motif éventuel s'il écrit de lui-même. Remboursement selon la règle prévue, sans discussion commerciale."
+            },
+            "due_offset_days": 7,
+            "window_days": 3,
+            "channel": "call",
+            "relevant": {
+                "==": [
+                    {
+                        "var": "acompte_verse"
+                    },
+                    true
+                ]
+            },
+            "items": [
+                {
+                    "key": "j7_retire",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "Appareil retiré dans les 7 jours ?"
+                    },
+                    "required": true,
+                    "choices": "oui_non"
+                },
+                {
+                    "key": "j7_jour_retrait",
+                    "type": "date",
+                    "label": {
+                        "fr": "Jour du retrait"
+                    },
+                    "relevant": {
+                        "==": [
+                            {
+                                "var": "j7_retire"
+                            },
+                            "oui"
+                        ]
+                    }
+                },
+                {
+                    "key": "j7_motif",
+                    "type": "text",
+                    "appearance": "multiline",
+                    "label": {
+                        "fr": "Motif si pas de retrait (mots de la personne, sinon « silence »)"
+                    },
+                    "relevant": {
+                        "==": [
+                            {
+                                "var": "j7_retire"
+                            },
+                            "non"
+                        ]
+                    },
+                    "max_length": 600
+                },
+                {
+                    "key": "j7_rembourse",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "Acompte remboursé ?"
+                    },
+                    "choices": "oui_non",
+                    "relevant": {
+                        "==": [
+                            {
+                                "var": "j7_retire"
+                            },
+                            "non"
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "key": "j14",
+            "label": {
+                "fr": "J+14 — usage réel"
+            },
+            "description": {
+                "fr": "Une question WhatsApp unique : « L'appareil est-il en service aujourd'hui ? » Noter O/N et le verbatim s'il y en a un."
+            },
+            "due_offset_days": 14,
+            "window_days": 3,
+            "channel": "whatsapp",
+            "relevant": {
+                "==": [
+                    {
+                        "var": "j7_retire"
+                    },
+                    "oui"
+                ]
+            },
+            "items": [
+                {
+                    "key": "j14_active",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "Appareil activé ?"
+                    },
+                    "required": true,
+                    "choices": "oui_non_na"
+                },
+                {
+                    "key": "j14_encore_utilise",
+                    "type": "select_one",
+                    "label": {
+                        "fr": "Encore utilisé aujourd'hui ?"
+                    },
+                    "choices": "oui_non_na"
+                },
+                {
+                    "key": "j14_verbatim",
+                    "type": "text",
+                    "appearance": "multiline",
+                    "label": {
+                        "fr": "Verbatim s'il y en a un (motif si pas d'activation, mots de la personne, sinon « silence »)"
+                    },
+                    "max_length": 600
+                }
+            ]
+        }
+    ]
+}

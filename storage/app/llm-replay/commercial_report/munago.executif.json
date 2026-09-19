@@ -1,0 +1,81 @@
+{
+  "title": "MunaGo Douala — note de décision",
+  "subtitle": "Quatre pages pour trancher : poursuivre, arrêter, ou refaire une vague",
+  "summary": "Sur {{n_valides}} entretiens valides à Douala, {{acompte_n}} familles ont versé l'acompte de 5 000 FCFA, soit {{taux_acompte}} %. {{oui_verbal_n}} autres ont dit oui sans payer. {{retrait_n}} acomptes sur {{retrait_d}} ont donné lieu à un retrait sous 7 jours. Le prix n'est pas le point de blocage : le seuil de rejet médian de l'appareil est de {{prix_rupture_mediane}} FCFA, au-dessus du prix envisagé. Décision recommandée : no-go commercial, go sur une seconde vague centrée sur le retrait.",
+  "key_figures": [
+    { "label": "Taux d'acompte", "value": "{{taux_acompte}} % ({{acompte_n}}/{{acompte_d}})", "trend": "down" },
+    { "label": "Retrait ≤ 7 j", "value": "{{retrait_n}}/{{retrait_d}}", "trend": "down" },
+    { "label": "Prix de rupture médian", "value": "{{prix_rupture_mediane}} FCFA", "trend": "flat" },
+    { "label": "Échantillon valide", "value": "n = {{n_valides}}", "trend": "up" }
+  ],
+  "sections": [
+    {
+      "heading": "La décision en un paragraphe",
+      "level": 1,
+      "paragraphs": [
+        "Les données ne soutiennent pas un lancement commercial : {{taux_acompte}} % d'acompte ({{acompte_n}}/{{acompte_d}}) et {{retrait_n}} retraits sur {{retrait_d}} acomptes reproduisent l'échec du premier pilote. Elles ne soutiennent pas davantage un abandon : le seuil de rejet médian de l'appareil ({{prix_rupture_mediane}} FCFA) reste au-dessus des 20 000 FCFA envisagés, et le motif de refus le plus codé est « {{refus_1_label}} », une raison de circonstance plus qu'un rejet du produit."
+      ],
+      "callouts": [
+        { "kind": "warning", "text": "Avec {{acompte_n}} acomptes, aucun taux de conversion calculé ici ne peut servir de base à un plan d'affaires." }
+      ]
+    },
+    {
+      "heading": "Les trois chiffres qui comptent",
+      "level": 1,
+      "paragraphs": [
+        "Le protocole n'a retenu qu'un signal : l'argent versé. Tout le reste est déclaratif."
+      ],
+      "table": {
+        "title": "Chaîne d'engagement",
+        "columns": ["Étape", "Effectif", "Taux"],
+        "rows": [
+          ["Fiches valides", "{{n_valides}}", "100 %"],
+          ["Acompte versé", "{{acompte_n}}", "{{taux_acompte}} %"],
+          ["Retrait ≤ 7 jours", "{{retrait_n}}", "{{taux_retrait}} % des acomptes"],
+          ["Activé à J+14", "{{activation_n}}", "{{taux_activation}} % des retraits"]
+        ]
+      },
+      "chart": {
+        "type": "bar",
+        "title": "Décision au moment de la proposition d'acompte",
+        "x": ["OUI — verse l'acompte", "OUI verbal seulement", "NON clair", "Hésite puis non", "Hésite puis oui + paiement"],
+        "series": [{ "name": "Fiches valides", "data": [{{dec_oui_acompte_n}}, {{oui_verbal_n}}, {{non_clair_n}}, {{hesite_non_n}}, {{hesite_oui_n}}] }],
+        "unit": null,
+        "source": "Question 13, enquête MunaGo terrain"
+      }
+    },
+    {
+      "heading": "Ce que disent les parents",
+      "level": 1,
+      "paragraphs": [
+        "Sur {{q6_codes}} réponses ouvertes codées, le frein dominant est « {{frein_1_label}} » ({{frein_1_n}} mentions), devant « {{frein_2_label}} » ({{frein_2_n}}). Le refus de l'acompte, lui, renvoie d'abord à la trésorerie du moment."
+      ],
+      "callouts": [
+        { "kind": "quote", "text": "{{frein_1_quote}}" },
+        { "kind": "quote", "text": "{{refus_1_quote}}" }
+      ]
+    },
+    {
+      "heading": "Ce qu'il faut décider maintenant",
+      "level": 1,
+      "paragraphs": [
+        "Une seule inconnue tue le projet : la capacité des familles à venir chercher l'appareil. Elle se mesure avec 30 acomptes et un point de retrait par quartier, pas avec un rapport supplémentaire."
+      ],
+      "bullets": [
+        "Suspendre commande de série et acquisition.",
+        "Ouvrir un point de retrait par quartier travaillé.",
+        "Refixer la décision sur le seul taux de retrait à 7 jours."
+      ]
+    }
+  ],
+  "recommendations": [
+    "Suspendre toute commande de série et toute campagne d'acquisition tant que le taux d'acompte reste à {{taux_acompte}} %.",
+    "Relancer une vague visant 30 acomptes, avec un point de retrait par quartier travaillé.",
+    "Traiter « {{frein_1_label}} » comme un sujet produit, pas comme une objection commerciale.",
+    "Conserver l'option A (20 000 FCFA + 3 000 FCFA/mois sans engagement), préférée par {{option_a_pct}} % des répondants."
+  ],
+  "appendix": {
+    "methodology": "Entretiens en face à face à Douala, questionnaire terrain MunaGo V1.0, filtre d'éligibilité en quatre points, proposition unique d'acompte de 5 000 FCFA par Mobile Money, suivi J+4 / J+7 / J+14. Échantillon non probabiliste ; quota « 5 fiches par réseau » dépassé ({{quota_reseau}}/5) ; effectifs de la chaîne d'engagement à un ou deux chiffres.",
+    "sample": "{{n_total}} fiches exploitables, {{n_valides}} valides, {{n_hors_cible}} hors cible ({{taux_hors_cible}} %). Durée médiane {{duree_mediane}} s."
+  }
+}

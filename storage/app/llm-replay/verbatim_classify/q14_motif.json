@@ -1,0 +1,20 @@
+{
+  "_comment": "Codage des verbatims réels de `q14_motif` (motif de refus de l'acompte). Rédigé à la main — résultat SIMULÉ.",
+  "fallback": { "themes": [], "sentiment": "neutral", "confidence": 0.2 },
+  "by_text": {
+    "Non, c'est surtout l'argent. Il y a autre chose ? Non, l'argent.": { "themes": ["argent_indisponible"], "sentiment": "negative", "confidence": 0.9 },
+    "Je n'ai pas 5 000 sur moi maintenant, revenez demain.": { "themes": ["argent_indisponible"], "sentiment": "negative", "confidence": 0.95 },
+    "Je ne vois pas l'intérêt, je sais toujours où sont mes enfants.": { "themes": ["pas_convaincu_besoin"], "sentiment": "negative", "confidence": 0.95 },
+    "Je ne suis pas convaincue que mon fils va le garder sur lui.": { "themes": ["pas_convaincu_besoin"], "sentiment": "negative", "confidence": 0.85 },
+    "Ma femme ne va pas être d'accord, elle trouve que je dépense trop.": { "themes": ["decideur_conjoint"], "sentiment": "negative", "confidence": 0.92 },
+    "Il faut que je demande à mon mari d'abord.": { "themes": ["decideur_conjoint"], "sentiment": "neutral", "confidence": 0.95 },
+    "Je ne vais pas me déplacer pour ça, je n'ai pas le temps.": { "themes": ["retrait_contraignant"], "sentiment": "negative", "confidence": 0.93 },
+    "Akwa c'est loin pour moi, je n'irai pas chercher ça là-bas.": { "themes": ["retrait_contraignant"], "sentiment": "negative", "confidence": 0.94 },
+    "(silence) … Non. Je vais réfléchir.": { "themes": ["report_decision"], "sentiment": "neutral", "confidence": 0.8 },
+    "Pas maintenant, on est en pleine rentrée. Plus tard peut-être.": { "themes": ["report_decision"], "sentiment": "neutral", "confidence": 0.88 },
+    "Payer avant d'avoir l'appareil ? Non. Vous amenez, je paie.": { "themes": ["mefiance_paiement_avance"], "sentiment": "negative", "confidence": 0.95 },
+    "Je n'ai pas MoMo, je paie ce soir quand mon frère passe.": { "themes": ["pas_de_momo"], "sentiment": "neutral", "confidence": 0.9 },
+    "Avec l'abonnement, ça fait trop cher au total.": { "themes": ["prix_global_trop_eleve"], "sentiment": "negative", "confidence": 0.94 },
+    "Je préfère acheter la montre chinoise à 8 000 au marché.": { "themes": ["alternative_moins_chere", "prix_global_trop_eleve"], "sentiment": "negative", "confidence": 0.9 }
+  }
+}

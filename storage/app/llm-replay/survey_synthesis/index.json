@@ -1,0 +1,59 @@
+{
+  "prompt": "survey_synthesis",
+  "description": "Synthèse markdown des résultats. Le texte est rédigé à la main mais ne contient AUCUN chiffre en dur : chaque `{{nom}}` est extrait par expression régulière du contexte statistique réellement reçu (SurveyInsightContext::toMarkdown). La synthèse rejouée cite donc toujours les vraies valeurs de la base au moment où elle est produite. Résultat SIMULÉ.",
+  "figures": {
+    "n_total": ["Fiches exploitables : (\\d+)", "?"],
+    "n_valides": ["dont (\\d+) valides", "?"],
+    "n_hors_cible": ["valides, (\\d+) hors cible", "?"],
+    "duree_mediane": ["Durée médiane : (\\d+) s", "?"],
+    "taux_acompte": ["acompte / fiches valides : ([\\d.,]+) %", "?"],
+    "acompte_n": ["acompte / fiches valides : [^(]*\\((\\d+)", "?"],
+    "acompte_d": ["acompte / fiches valides : [^(]*\\(\\d+/(\\d+)\\)", "?"],
+    "taux_retrait": ["parmi les acomptes : ([\\d.,]+) %", "?"],
+    "retrait_n": ["parmi les acomptes : [^(]*\\((\\d+)", "?"],
+    "retrait_d": ["parmi les acomptes : [^(]*\\(\\d+/(\\d+)\\)", "?"],
+    "taux_activation": ["parmi les appareils retirés : ([\\d.,]+) %", "?"],
+    "activation_n": ["parmi les appareils retirés : [^(]*\\((\\d+)", "?"],
+    "activation_d": ["parmi les appareils retirés : [^(]*\\(\\d+/(\\d+)\\)", "?"],
+    "taux_hors_cible": ["hors cible / contacts : ([\\d.,]+) %", "?"],
+    "prix_rupture_mediane": ["f2_prix_rupture[^#]*médiane ([\\d.]+)", "?"],
+    "prix_rupture_n": ["f2_prix_rupture., n = (\\d+)", "?"],
+    "prix_appareil_trop_cher_pct": ["C'est trop cher : \\d+ \\(([\\d.,]+) %\\)", "?"],
+    "prix_appareil_trop_cher_n": ["C'est trop cher : (\\d+)", "?"],
+    "prix_appareil_acceptable_pct": ["C'est cher mais acceptable : \\d+ \\(([\\d.,]+) %\\)", "?"],
+    "abo_2000_pct": ["2 000 FCFA/mois : \\d+ \\(([\\d.,]+) %\\)", "?"],
+    "option_a_pct": ["Option A[^:]*: \\d+ \\(([\\d.,]+) %\\)", "?"],
+    "option_a_n": ["Option A[^:]*: (\\d+)", "?"],
+    "oui_verbal_n": ["OUI verbal seulement[^:]*: (\\d+)", "?"],
+    "oui_verbal_pct": ["OUI verbal seulement[^:]*: \\d+ \\(([\\d.,]+) %\\)", "?"],
+    "non_clair_n": ["NON clair : (\\d+)", "?"],
+    "quota_reseau": ["Maximum 5 [^:]*: (\\d+)", "?"],
+    "q12_non_securite_pct": ["Non, si c'est pour sa sécurité : \\d+ \\(([\\d.,]+) %\\)", "?"],
+    "q12_oui_beaucoup_pct": ["Oui, beaucoup : \\d+ \\(([\\d.,]+) %\\)", "?"],
+    "q7_portera_oui_pct": ["Oui, sans doute : \\d+ \\(([\\d.,]+) %\\)", "?"],
+    "d2_incident_oui_n": ["d2_incident., n = \\d+\\)\\n- Oui : (\\d+)", "?"],
+    "d2_incident_oui_pct": ["d2_incident., n = \\d+\\)\\n- Oui : \\d+ \\(([\\d.,]+) %\\)", "?"],
+    "q6_codes": ["q6_freins., (\\d+) codés", "0"],
+    "frein_1_label": ["q6_freins., \\d+ codés\\)\\n- \\*\\*([^*]+)\\*\\*", "non classé"],
+    "frein_1_n": ["q6_freins., \\d+ codés\\)\\n- \\*\\*[^*]+\\*\\* : (\\d+)", "0"],
+    "frein_1_pct": ["q6_freins., \\d+ codés\\)\\n- \\*\\*[^*]+\\*\\* : \\d+ \\(([\\d.,]+) %\\)", "0"],
+    "frein_1_quote": ["q6_freins., \\d+ codés\\)\\n- \\*\\*[^*]+\\*\\* : [^\\n]*\\n  > ([^\\n]+)", "(aucun verbatim codé)"],
+    "q14_codes": ["q14_motif., (\\d+) codés", "0"],
+    "refus_1_label": ["q14_motif., \\d+ codés\\)\\n- \\*\\*([^*]+)\\*\\*", "non classé"],
+    "refus_1_n": ["q14_motif., \\d+ codés\\)\\n- \\*\\*[^*]+\\*\\* : (\\d+)", "0"],
+    "refus_1_pct": ["q14_motif., \\d+ codés\\)\\n- \\*\\*[^*]+\\*\\* : \\d+ \\(([\\d.,]+) %\\)", "0"],
+    "refus_1_quote": ["q14_motif., \\d+ codés\\)\\n- \\*\\*[^*]+\\*\\* : [^\\n]*\\n  > ([^\\n]+)", "(aucun verbatim codé)"]
+  },
+  "rules": [
+    {
+      "id": "munago-avec-verbatims",
+      "comment": "Les verbatims de `q6_freins` ET de `q14_motif` sont classés : le contexte porte alors un bloc « ## Verbatims — … » pour chacun, et la synthèse peut citer la hiérarchie des freins et des motifs de refus.",
+      "when": { "regex": "(?=[\\s\\S]*## Verbatims[^\\n]*q6_freins)(?=[\\s\\S]*## Verbatims[^\\n]*q14_motif)" },
+      "response": "munago.avec-verbatims.md"
+    }
+  ],
+  "default": {
+    "comment": "Aucun livre de codes appliqué : la synthèse le dit explicitement au lieu d'inventer une hiérarchie de freins.",
+    "response": "munago.sans-verbatims.md"
+  }
+}

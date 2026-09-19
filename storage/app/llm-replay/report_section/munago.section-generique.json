@@ -1,0 +1,28 @@
+{
+  "heading": "(imposé par le serveur)",
+  "level": 2,
+  "paragraphs": [
+    "Cette section a été réécrite à partir des seules statistiques de l'enquête. L'échantillon compte {{n_total}} fiches exploitables, dont {{n_valides}} entretiens valides et {{n_hors_cible}} fiches hors cible ({{taux_hors_cible}} % des contacts), pour une durée médiane d'entretien de {{duree_mediane}} secondes.",
+    "Le signal retenu par le protocole reste l'acompte effectivement versé : {{acompte_n}} versements sur {{acompte_d}} fiches valides, soit {{taux_acompte}} %. En aval, {{retrait_n}} appareils sur {{retrait_d}} ont été retirés dans les sept jours et {{activation_n}} sur {{activation_d}} étaient activés à J+14. Ces trois effectifs sont trop faibles pour supporter une projection.",
+    "Sur le prix, le seuil de rejet médian de l'appareil s'établit à {{prix_rupture_mediane}} FCFA (n = {{prix_rupture_n}} réponses chiffrées), et {{option_a_n}} répondants ({{option_a_pct}} %) préfèrent la formule sans engagement long à l'entrée à bas prix assortie d'un engagement de douze mois."
+  ],
+  "bullets": [
+    "Acompte versé : {{acompte_n}}/{{acompte_d}} ({{taux_acompte}} %).",
+    "Accords verbaux sans paiement : {{oui_verbal_n}} fiches ({{oui_verbal_pct}} %).",
+    "Retrait sous 7 jours : {{retrait_n}}/{{retrait_d}} · activation à J+14 : {{activation_n}}/{{activation_d}}.",
+    "Seuil de rejet médian de l'appareil : {{prix_rupture_mediane}} FCFA."
+  ],
+  "table": {
+    "title": "Chaîne d'engagement",
+    "columns": ["Étape", "Effectif", "Taux"],
+    "rows": [
+      ["Fiches valides", "{{n_valides}}", "100 %"],
+      ["Acompte versé", "{{acompte_n}}", "{{taux_acompte}} %"],
+      ["Retrait ≤ 7 jours", "{{retrait_n}}", "{{taux_retrait}} % des acomptes"],
+      ["Appareil activé à J+14", "{{activation_n}}", "{{taux_activation}} % des retraits"]
+    ]
+  },
+  "callouts": [
+    { "kind": "warning", "text": "Effectifs faibles : {{acompte_n}} acomptes, {{retrait_n}} retraits, {{activation_n}} activation(s). Les taux correspondants sont des observations, pas des mesures." }
+  ]
+}

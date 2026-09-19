@@ -1,0 +1,14 @@
+{
+  "prompt": "verbatim_discover",
+  "description": "Livre de codes proposé à partir d'un échantillon de réponses ouvertes. Chaque grille a été construite à la main en lisant les VRAIS verbatims de la base de démonstration MunaGo : les `examples` sont des extraits réellement présents. Résultat SIMULÉ. Aucune règle par défaut : une question non couverte fait échouer le job avec un message explicite, plutôt que de produire des thèmes inventés.",
+  "rules": [
+    { "id": "q6_freins", "when": { "vars": { "question_key": "q6_freins" } }, "response": "q6_freins.json" },
+    { "id": "q14_motif", "when": { "vars": { "question_key": "q14_motif" } }, "response": "q14_motif.json" },
+    { "id": "q5_reaction", "when": { "vars": { "question_key": "q5_reaction" } }, "response": "q5_reaction.json" },
+    { "id": "q12_conditions", "when": { "vars": { "question_key": "q12_conditions" } }, "response": "q12_conditions.json" },
+    { "id": "q7_circonstances", "when": { "vars": { "question_key": "q7_circonstances" } }, "response": "q7_circonstances.json" },
+    { "id": "d1_precision", "when": { "vars": { "question_key": "d1_precision" } }, "response": "d1_precision.json" },
+    { "id": "d3_recit", "when": { "vars": { "question_key": "d3_recit" } }, "response": "d3_recit.json" },
+    { "id": "d4_verbatim", "when": { "vars": { "question_key": "d4_verbatim" } }, "response": "d4_verbatim.json" }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "heading": "Recommandation : no-go commercial, go conditionnel sur une seconde vague",
+  "level": 2,
+  "paragraphs": [
+    "La décision se joue sur un seul chiffre : {{acompte_n}} familles sur {{acompte_d}} ont sorti 5 000 FCFA sur place, soit {{taux_acompte}} %. À ce niveau, aucune acquisition en face à face ne s'amortit, et la question n'est pas de savoir s'il faut lancer, mais ce qu'il reste à prouver avant de pouvoir lancer.",
+    "Deux inconnues restent ouvertes et une seule est bloquante. La première, non bloquante à ce stade, est le prix : le seuil de rejet médian de l'appareil s'établit à {{prix_rupture_mediane}} FCFA (n = {{prix_rupture_n}}), au-dessus des 20 000 FCFA envisagés, et {{option_a_n}} répondants ({{option_a_pct}} %) préfèrent la formule sans engagement. La seconde, bloquante, est le retrait : {{retrait_n}} appareils retirés sur {{retrait_d}} acomptes, c'est-à-dire le point précis où le premier pilote avait échoué.",
+    "La recommandation est donc un no-go sur le déploiement commercial et un go sur une seconde vague de terrain, calibrée pour produire au moins 30 acomptes et un point de retrait par quartier travaillé. La décision suivante se prend sur le seul taux de retrait à 7 jours, à date fixe, sans rapport intermédiaire."
+  ],
+  "bullets": [
+    "No-go : aucune commande de série, aucune campagne d'acquisition, aucune promesse de livraison à domicile.",
+    "Go : une vague visant 30 acomptes minimum, avec un point de retrait par quartier travaillé.",
+    "Condition de sortie : un taux de retrait à 7 jours mesuré sur au moins 30 acomptes.",
+    "Instruire le frein le plus codé, « {{frein_1_label}} » ({{frein_1_n}} mentions), avant la vague suivante : le confronter au post-codage de l'enquêteur et décider s'il relève du produit, du prix ou de l'explication donnée."
+  ],
+  "table": {
+    "title": "Ce qu'il faut prouver avant de lancer",
+    "columns": ["Question ouverte", "Mesure aujourd'hui", "Seuil de décision"],
+    "rows": [
+      ["Les familles paient-elles ?", "{{acompte_n}}/{{acompte_d}} ({{taux_acompte}} %)", "30 acomptes collectés"],
+      ["Viennent-elles chercher l'appareil ?", "{{retrait_n}}/{{retrait_d}}", "Mesuré sur 30 acomptes"],
+      ["L'appareil reste-t-il en service ?", "{{activation_n}}/{{activation_d}}", "Mesuré à J+14 sur 20 retraits"]
+    ]
+  },
+  "callouts": [
+    { "kind": "warning", "text": "Avec {{acompte_n}} acomptes, tout taux de conversion calculé ici a un intervalle de confiance plus large que l'écart entre un succès et un échec. Ces ratios orientent la prochaine vague ; ils ne fondent pas un plan d'affaires." },
+    { "kind": "info", "text": "Le no-go porte sur le déploiement, pas sur le produit : l'objection dominante des parents est l'usage de l'objet par l'enfant, pas son prix." }
+  ]
+}

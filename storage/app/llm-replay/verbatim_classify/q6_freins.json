@@ -1,0 +1,18 @@
+{
+  "_comment": "Codage des verbatims réels de `q6_freins` (base de démonstration MunaGo). Le rejeu reçoit le lot [{ref, text}] et renvoie les MÊMES `ref` : les identifiants de soumission sont donc toujours ceux demandés. Codage rédigé à la main — résultat SIMULÉ.",
+  "fallback": { "themes": [], "sentiment": "neutral", "confidence": 0.2 },
+  "by_text": {
+    "Ils vont le perdre ou le casser en une semaine. Autre chose ? La batterie, il faut charger tous les jours ?": { "themes": ["casse_perte_batterie"], "sentiment": "negative", "confidence": 0.95 },
+    "Qui voit les données ? Vous ? Si quelqu'un pirate, il sait où est mon enfant.": { "themes": ["confiance_donnees"], "sentiment": "negative", "confidence": 0.95 },
+    "L'enfant est petit, il ne va pas comprendre, il va le donner à un camarade.": { "themes": ["enfant_ne_portera_pas"], "sentiment": "negative", "confidence": 0.92 },
+    "Mon fils va l'enlever et le laisser à l'école, je le connais.": { "themes": ["enfant_ne_portera_pas"], "sentiment": "negative", "confidence": 0.93 },
+    "Le mois passé on m'a déjà arnaqué avec une histoire de paiement mobile.": { "themes": ["marque_inconnue_arnaque"], "sentiment": "negative", "confidence": 0.88 },
+    "Je ne connais pas votre société. Si je paie et que vous disparaissez ?": { "themes": ["marque_inconnue_arnaque"], "sentiment": "negative", "confidence": 0.94 },
+    "Je gère déjà, j'appelle la nounou. Je n'ai pas besoin.": { "themes": ["inutile_je_gere"], "sentiment": "negative", "confidence": 0.93 },
+    "Le prix. 20 000 plus l'abonnement chaque mois, ça fait beaucoup avec l'école.": { "themes": ["prix_abonnement"], "sentiment": "negative", "confidence": 0.96 },
+    "Le réseau à Logpom est mauvais. Et l'abonnement en plus… non.": { "themes": ["reseau_couverture", "prix_abonnement"], "sentiment": "negative", "confidence": 0.9 },
+    "Je ne vois pas. Il faut que j'en parle à la maison d'abord.": { "themes": ["decideur_absent"], "sentiment": "neutral", "confidence": 0.85 },
+    "C'est mon mari qui décide pour ces dépenses-là.": { "themes": ["decideur_absent"], "sentiment": "neutral", "confidence": 0.95 },
+    "Rien, si ça marche vraiment. Peut-être le prix de l'abonnement.": { "themes": ["aucun_frein", "prix_abonnement"], "sentiment": "mixed", "confidence": 0.8 }
+  }
+}

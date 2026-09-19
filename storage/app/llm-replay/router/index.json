@@ -1,0 +1,18 @@
+{
+  "prompt": "router",
+  "description": "Routeur d'intentions du chat Datamuse : renvoie SIMPLE, COMPLEXE, ANALYSE ou EXPLICATION. En rejeu, seules les trois questions de démonstration de la source MunaGo sont routées finement ; tout le reste part en SIMPLE, comme le prévoit déjà le repli de LlmRouterService. Résultat SIMULÉ.",
+  "rules": [
+    {
+      "id": "freins-complexe",
+      "comment": "« Quels sont les freins les plus cités ? » suppose d'éclater une colonne multi-valuée : CTE récursive, donc COMPLEXE.",
+      "when": { "regex": "frein|obstacle|emp[êe]ch" },
+      "response": "complexe.md"
+    },
+    {
+      "id": "explication-schema",
+      "when": { "regex": "explique|expliquer|que contient|quelles colonnes|structure de la base" },
+      "response": "explication.md"
+    }
+  ],
+  "default": { "response": "simple.md" }
+}

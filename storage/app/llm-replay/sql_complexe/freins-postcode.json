@@ -1,0 +1,10 @@
+{
+  "type": "sql",
+  "content": "WITH RECURSIVE eclate(theme, reste) AS (\n    SELECT '', q6_freins_codes || ';'\n      FROM reponses\n     WHERE q6_freins_codes IS NOT NULL AND q6_freins_codes <> ''\n    UNION ALL\n    SELECT substr(reste, 1, instr(reste, ';') - 1),\n           substr(reste, instr(reste, ';') + 1)\n      FROM eclate\n     WHERE reste <> ''\n)\nSELECT e.theme AS frein,\n       COUNT(*) AS mentions,\n       ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM reponses WHERE q6_freins_codes IS NOT NULL AND q6_freins_codes <> ''), 1) AS part_pct\n  FROM eclate e\n WHERE e.theme <> ''\n GROUP BY e.theme\n ORDER BY mentions DESC",
+  "chart_config": {
+    "type": "bar",
+    "x_axis": "frein",
+    "series": [{ "key": "mentions", "name": "Mentions" }]
+  },
+  "python_code": null
+}
