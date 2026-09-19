@@ -38,10 +38,20 @@ return [
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
-            'busy_timeout' => null,
-            'journal_mode' => null,
+            // E-03 — plusieurs processus écrivent sur le même fichier en développement (serveur web,
+            // serveur mobile, worker de file, commandes artisan). Sans attente, une écriture concurrente
+            // échoue immédiatement sur « database is locked » et fait tomber le job. Une sauvegarde de
+            // brouillon MunaGo prend ~3 s : 15 s laissent la place à deux écritures qui se croisent.
+            // En production (MySQL/PostgreSQL) ce réglage n'est pas utilisé.
+            'busy_timeout' => env('DB_BUSY_TIMEOUT', 15000),
+            'journal_mode' => env('DB_JOURNAL_MODE'),
             'synchronous' => null,
-            'transaction_mode' => 'DEFERRED',
+            // Une transaction `DEFERRED` démarre en lecture et monte en écriture au premier `UPDATE` :
+            // si un autre processus a écrit entre-temps, SQLite refuse la montée **immédiatement**
+            // (`database is locked`) sans respecter `busy_timeout`. En `IMMEDIATE`, le verrou d'écriture
+            // est pris dès le début et l'attente s'applique. Symptôme observé en E-03 : la traduction IA
+            // du brouillon échouait dès qu'un autre processus écrivait pendant le job.
+            'transaction_mode' => env('DB_TRANSACTION_MODE', 'IMMEDIATE'),
         ],
 
         'mysql' => [
