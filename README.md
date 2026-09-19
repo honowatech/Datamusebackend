@@ -48,8 +48,10 @@ php artisan schedule:work
 | Variable | Rôle |
 |---|---|
 | `FRONTEND_URL`, `CORS_EXTRA_ORIGINS` | origines autorisées (`config/cors.php`) |
+| `LLM_DRIVER` | `live` (défaut, appels réels) ou `replay` (**§ 6**, développement seulement) |
 | `GEMINI_API_KEY`, `DEEPSEEK_API_KEY` | clés IA de repli (chaque utilisateur peut enregistrer les siennes, chiffrées) |
 | `GEMINI_MODEL`, `DEEPSEEK_MODEL` | modèles utilisés (`config/services.php`) |
+| `DB_BUSY_TIMEOUT`, `DB_JOURNAL_MODE`, `DB_TRANSACTION_MODE` | SQLite : attente sur verrou (15 s), journal (`WAL` conseillé en dev), mode de transaction (`IMMEDIATE`) |
 | `SURVEY_MEDIA_DISK`, `SURVEY_MEDIA_MAX_MB` | disque **privé** des médias de collecte, plafond (25 Mo) |
 | `SURVEY_DATASOURCE_DIR` | répertoire des SQLite matérialisés (défaut : `storage/app/imported_databases`) |
 | `SURVEY_EXPORT_MAX_ROWS` | plafond de l'export CSV/XLSX synchrone (50 000) |
@@ -189,6 +191,9 @@ php artisan test tests/Feature/Survey       # API du module Enquêtes
 php artisan test --filter MobileSyncTest    # synchronisation mobile
 ```
 
+> Le mode rejeu (§ 6) est **désactivé** dans `phpunit.xml` (`LLM_DRIVER=live`) : les tests qui le
+> concernent l'activent eux-mêmes (`LlmReplayProviderTest`, `ReplayAiChainTest`).
+
 La suite tourne sur une base **SQLite en mémoire** (`phpunit.xml`), file `sync` et
 `Tests\TestCase` isole le répertoire des sources matérialisées dans un dossier temporaire **par test** :
 publier un questionnaire ou recevoir une soumission produit donc réellement un fichier SQLite, sans
@@ -206,6 +211,7 @@ Points d'entrée notables :
 | `tests/Feature/Survey/MaterializationTest` | colonnes de `reponses` sur la fixture MunaGo, bascule de fichier |
 | `tests/Feature/Survey/StatsTest`, `SubmissionApiTest`, `SubmissionExportTest`, `SupervisionTest` | résultats, export, supervision |
 | `tests/Feature/Survey/VerbatimTest`, `SurveyReportTest` | classification IA, livres de codes, synthèse, rapports |
+| `tests/Unit/LlmReplayProviderTest`, `tests/Feature/Survey/ReplayAiChainTest` | fournisseur de rejeu (§ 6) : sélection, refus en production, transformations, chiffres extraits, marquage « simulé » de bout en bout |
 | `tests/Feature/Survey/PublicLinkTest` | lien public, 410 expiré/plein, pot de miel |
 | `tests/Feature/Survey/SurveyDemoSeederTest` | jeu de démonstration et son idempotence |
 
@@ -214,11 +220,85 @@ Points d'entrée notables :
 
 ---
 
-## 6. Dépannage
+## 6. IA sans clé : le mode « rejeu » (développement uniquement)
+
+`LLM_DRIVER=replay` remplace **tout** appel à un fournisseur IA par une réponse lue dans
+`storage/app/llm-replay/`. Aucun réseau, aucune clé API, aucun crédit consommé — et **aucun modèle** :
+les réponses de ce dépôt ont été **écrites à la main**. Tout ce qu'elles produisent est donc *simulé*, et
+le serveur le dit partout :
+
+- `ai_jobs.provider = replay` et message de job suffixé « **(simulé)** » ;
+- `survey_reports.provider = model = replay` ;
+- `GET /api/jobs/{uuid}` → `provider: "replay"`, `simulated: true` ;
+- une ligne `IA simulée (rejeu) : réponse servie depuis le dépôt local.` dans le journal à chaque appel.
+
+`APP_ENV=production` **refuse** ce pilote avec un message explicite, quelle que soit la valeur de
+`LLM_DRIVER`.
+
+```bash
+# Activer
+echo "LLM_DRIVER=replay" >> .env
+php artisan config:clear
+# puis REDÉMARRER le worker : il garde sa configuration et ses classes en mémoire
+```
+
+### Organisation du dépôt de réponses
+
+```
+storage/app/llm-replay/
+├── form_generation/      index.json + munago-terrain.v1.json + variante invalide
+├── form_repair/          version corrigée
+├── form_translation/     table fr → en, transformation `translation`
+├── verbatim_discover/    un livre de codes par question ouverte
+├── verbatim_classify/    un codage par verbatim, transformation `verbatim_classify`
+├── survey_synthesis/     deux variantes markdown (avec / sans verbatims classés)
+├── commercial_report/    plan long, note exécutive, variante invalide
+├── report_section/       réécriture d'une section
+├── report_repair/        correction d'un ReportContent refusé
+├── router/ sql_simple/ sql_complexe/ sql_analyse/ chat_analysis/   (chat Datamuse)
+```
+
+Chaque dossier porte un `index.json` : `rules[]` (première règle satisfaite gagne), puis `default`.
+Une règle sélectionne sur `vars` (paramètres transmis : `question_key`, `target_lang`, `orientation`,
+`heading`…), `contains` / `any_contains` / `regex` (message reçu) ou `system` (prompt système, donc le
+schéma de la base pour le chat). Deux traitements facultatifs s'appliquent ensuite :
+
+| Clé | Effet |
+|---|---|
+| `figures` | remplace `{{nom}}` par une valeur **extraite du message reçu** (`["motif", "repli"]`). C'est ce qui garantit qu'une synthèse ou un rapport rejoué ne cite que des chiffres réels, à jour au moment de l'appel |
+| `transform: translation` | le lot `[{path, text}]` reçu ressort avec **les mêmes `path`** ; un texte hors table est recopié tel quel |
+| `transform: verbatim_classify` | le lot `[{ref, text}]` reçu ressort avec **les mêmes `ref`** ; un verbatim hors table reçoit `themes: []`, `confidence: 0.2` |
+
+Le **nom du prompt** est la clé de tout : il désigne le dossier et doit être transmis dans
+`options['prompt_name']` par tout nouvel appel IA (`SurveyAiService`, `SqlGenerationService`,
+`LlmRouterService`, `ChatController` le font déjà). Sans lui, le rejeu lève une erreur explicite plutôt
+que de deviner. De même, une question sans règle **échoue** avec un message nommant ce qui manque : le
+rejeu ne fabrique jamais une réponse vraisemblable pour un cas qu'il ne couvre pas.
+
+Réglages : `LLM_REPLAY_PATH`, `LLM_REPLAY_LATENCY_MIN_MS` / `_MAX_MS` (latence simulée, 500–2000 ms ;
+mise à 0 dans `phpunit.xml`).
+
+### Revenir aux appels réels
+
+```bash
+# .env
+LLM_DRIVER=live
+GEMINI_API_KEY=…        # ou DEEPSEEK_API_KEY=…
+```
+
+`php artisan config:clear`, puis redémarrer le worker. La liste des parcours à rejouer lors de ce test
+réel est en fin de [`../docs/INTEGRATION.md`](../docs/INTEGRATION.md).
+
+---
+
+## 7. Dépannage
 
 | Symptôme | Cause probable |
 |---|---|
 | Un job reste `queued` indéfiniment | aucun worker : lancer `php artisan queue:work` |
+| Un job rejoue l'**ancien** code ou l'ancienne configuration | `queue:work` garde tout en mémoire : le **redémarrer** après toute modification de `app/Jobs/`, `config/` ou `.env` |
+| `Mode rejeu : aucune réponse enregistrée pour le prompt « … »` | `LLM_DRIVER=replay` et le dossier manque dans `storage/app/llm-replay/` : l'ajouter ou repasser en `live` |
+| `database is locked` en développement | plusieurs processus écrivent le même fichier SQLite : `DB_BUSY_TIMEOUT`, `DB_TRANSACTION_MODE=IMMEDIATE` et `PRAGMA journal_mode=WAL` atténuent ; en production MySQL/PostgreSQL le sujet n'existe pas |
 | « Le prompt système « … » est absent » | `php artisan db:seed --class=SystemPromptSeeder` |
 | `GET …/datasource` reste `building` | worker arrêté, ou `SURVEY_DATASOURCE_DIR` non inscriptible |
 | `409 datasource_not_ready` sur une synthèse ou un rapport | source jamais matérialisée : `POST /api/surveys/{id}/datasource/rebuild` |
