@@ -63,6 +63,43 @@ class MediaUploadController extends ApiController
     }
 
     /**
+     * `POST /mobile/follow-ups/{parentUuid}/{stageKey}/media/{questionKey}` — média capturé dans une
+     * **étape de suivi**.
+     *
+     * Une étape ne crée aucune `Submission` : le fichier est rattaché à la soumission **parente**.
+     * Les clés DFS étant uniques dans toute la définition (sections *et* étapes), la clé de question
+     * est stockée telle quelle — aucun préfixe n'est nécessaire à l'unicité.
+     */
+    public function storeStage(UploadMediaRequest $request, string $parentUuid, string $stageKey, string $questionKey): JsonResponse
+    {
+        $parent = Submission::query()->where('uuid', strtolower($parentUuid))->first();
+        if ($parent === null) {
+            return $this->fail('Soumission parente introuvable.', 404);
+        }
+        if (! $request->user()->can('collect', $parent->survey)) {
+            return $this->fail("Vous n'êtes pas affecté à ce questionnaire.", 403);
+        }
+        if ($parent->enumerator_id !== null
+            && $parent->enumerator_id !== $request->user()->id
+            && ! $request->user()->can('reviewSubmissions', $parent->survey)) {
+            return $this->fail("Cette soumission n'est pas la vôtre.", 403);
+        }
+
+        $version = $parent->version ?? SurveyVersion::query()->find($parent->survey_version_id);
+        $question = $version === null
+            ? null
+            : QuestionCatalog::fromDefinition($version->definition ?? [])->get($questionKey);
+
+        if ($question === null || ($question['stage'] ?? null) !== $stageKey) {
+            $message = "La clé « {$questionKey} » n'appartient pas à l'étape « {$stageKey} ».";
+
+            return $this->fail($message, 422, ['question_key' => [$message]]);
+        }
+
+        return $this->storeFor($request, $parent, $questionKey);
+    }
+
+    /**
      * Cœur de l'envoi, **sans** contrôle d'accès : l'appelant a déjà établi sa légitimité
      * (enquêteur propriétaire pour `store()`, lien public ouvert pour B-12).
      */

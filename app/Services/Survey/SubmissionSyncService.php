@@ -86,13 +86,21 @@ class SubmissionSyncService
     public function __construct(
         private readonly SubmissionQualityService $quality = new SubmissionQualityService,
         private readonly FicheCodeGenerator $ficheCodes = new FicheCodeGenerator,
+        private readonly FollowUpService $followUps = new FollowUpService,
     ) {}
 
     /**
      * Traite un lot, dans l'ordre reçu.
      *
+     * Un élément portant `followup_stage` **et** `parent_submission_uuid` est une réponse d'étape :
+     * le contrat (`syncSubmissions`) l'accepte ici « pour compatibilité, routée vers la même
+     * logique ». Il est donc **délégué** à `FollowUpService`, qui produit exactement le résultat de
+     * `POST /mobile/follow-ups` (`FollowUpSyncResult`) — sans quoi la réponse deviendrait une
+     * soumission de plus et l'entrée `follow_up_entries` resterait `pending` (écart M-11).
+     * Le canal public n'a pas d'acteur : il ne peut pas répondre à une étape de suivi.
+     *
      * @param  list<array<string, mixed>>  $payloads
-     * @return list<SubmissionSyncResult>
+     * @return list<SubmissionSyncResult|FollowUpSyncResult>
      */
     public function syncBatch(
         ?User $user,
@@ -102,10 +110,27 @@ class SubmissionSyncService
     ): array {
         $results = [];
         foreach ($payloads as $payload) {
-            $results[] = $this->sync($user, is_array($payload) ? $payload : [], $channel, $appVersion);
+            $payload = is_array($payload) ? $payload : [];
+            $results[] = $user !== null && self::isFollowUpPayload($payload)
+                ? $this->followUps->sync($user, $payload)
+                : $this->sync($user, $payload, $channel, $appVersion);
         }
 
         return $results;
+    }
+
+    /**
+     * Le payload est-il une réponse d'étape de suivi (`FollowUpIn` du contrat) ?
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public static function isFollowUpPayload(array $payload): bool
+    {
+        $stage = $payload['followup_stage'] ?? null;
+        $parent = $payload['parent_submission_uuid'] ?? null;
+
+        return is_string($stage) && trim($stage) !== ''
+            && is_string($parent) && trim($parent) !== '';
     }
 
     /**

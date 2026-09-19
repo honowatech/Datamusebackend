@@ -3,10 +3,12 @@
 namespace App\Services\Survey;
 
 use App\Enums\FollowUpStatus;
+use App\Enums\MediaState;
 use App\Enums\SurveyStatus;
 use App\Jobs\MaterializeSurveyDatasourceJob;
 use App\Models\FollowUpEntry;
 use App\Models\Submission;
+use App\Models\SubmissionMedia;
 use App\Models\Survey;
 use App\Models\SurveyVersion;
 use App\Models\User;
@@ -54,6 +56,9 @@ class FollowUpService
 
     /** Séparateur de `respondent_label` (contrat `FollowUpDue`). */
     public const LABEL_SEPARATOR = ' · ';
+
+    /** Types DFS portant un fichier (miroir de `MediaUploadController::MEDIA_TYPES`). */
+    public const MEDIA_QUESTION_TYPES = ['photo', 'signature', 'audio'];
 
     // ==================================================================== création
 
@@ -366,7 +371,11 @@ class FollowUpService
                 case FollowUpStatus::Done:
                     $editable = (bool) ($settings['enumerator_can_edit_after_submit'] ?? false);
                     if (! $editable || $entry->client_updated_at === null || ! $clientUpdatedAt->greaterThan($entry->client_updated_at)) {
-                        return FollowUpSyncResult::duplicate($uuid, $entry, $parentUuid);
+                        return FollowUpSyncResult::duplicate($uuid, $entry, $parentUuid, null, $this->pendingStageMedia(
+                            $parent,
+                            QuestionCatalog::fromDefinition($version->definition ?? []),
+                            $stageKey,
+                        ));
                     }
                     $mode = FollowUpSyncResult::UPDATED;
                     break;
@@ -430,12 +439,119 @@ class FollowUpService
             return $target;
         });
 
+        $pendingMedia = $this->syncStageMedia($parent, $engine->catalog(), $stageKey, $payload);
+
         $this->reevaluate($parent, $version);
 
         // B-09b : les colonnes `{stage}_statut` / `{stage}_date` de `reponses` doivent suivre.
         MaterializeSurveyDatasourceJob::refresh($parent->survey_id);
 
-        return FollowUpSyncResult::stored($uuid, $mode, $entry->refresh(), $parentUuid);
+        return FollowUpSyncResult::stored($uuid, $mode, $entry->refresh(), $parentUuid, $pendingMedia);
+    }
+
+    // ==================================================================== médias d'étape
+
+    /**
+     * Médias annoncés par une réponse d'étape.
+     *
+     * Une étape ne crée **aucune** `Submission` : les lignes `submission_media` sont rattachées à la
+     * soumission **parente**. Les clés DFS étant uniques dans toute la définition (sections *et*
+     * étapes), aucun préfixe n'est nécessaire pour l'unicité `(submission, question_key, repeat_index)`.
+     * L'envoi se fait ensuite sur `POST /mobile/follow-ups/{parentUuid}/{stageKey}/media/{questionKey}`.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return list<array{question_key: string, repeat_index: int|null, sha256: string, upload_url: string}>
+     */
+    private function syncStageMedia(Submission $parent, QuestionCatalog $catalog, string $stageKey, array $payload): array
+    {
+        foreach (is_array($payload['media'] ?? null) ? $payload['media'] : [] as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+            $key = (string) ($item['question_key'] ?? '');
+            $sha = strtolower((string) ($item['sha256'] ?? ''));
+            if ($key === '' || $sha === '' || ! in_array($key, self::mediaKeysOfStage($catalog, $stageKey), true)) {
+                continue;
+            }
+            $repeatIndex = isset($item['repeat_index']) && is_numeric($item['repeat_index']) ? (int) $item['repeat_index'] : 0;
+
+            $media = SubmissionMedia::query()->firstOrNew([
+                'submission_id' => $parent->id,
+                'question_key' => $key,
+                'repeat_index' => $repeatIndex,
+            ]);
+
+            // Un fichier déjà reçu avec la même empreinte n'est jamais réinitialisé.
+            if ($media->exists && $media->isUploaded() && $media->sha256 === $sha) {
+                continue;
+            }
+
+            $media->forceFill([
+                'submission_id' => $parent->id,
+                'question_key' => $key,
+                'repeat_index' => $repeatIndex,
+                'disk' => (string) config('filesystems.survey_media_disk', 'local'),
+                'mime' => (string) ($item['mime'] ?? 'application/octet-stream'),
+                'size' => (int) ($item['size'] ?? 0),
+                'sha256' => $sha,
+                'state' => MediaState::Pending,
+                'path' => $media->sha256 === $sha ? $media->path : null,
+            ])->save();
+        }
+
+        return $this->pendingStageMedia($parent, $catalog, $stageKey);
+    }
+
+    /**
+     * Descripteurs encore attendus pour cette étape (`FollowUpSyncResult.pending_media`).
+     *
+     * @return list<array{question_key: string, repeat_index: int|null, sha256: string, upload_url: string}>
+     */
+    private function pendingStageMedia(Submission $parent, QuestionCatalog $catalog, string $stageKey): array
+    {
+        $keys = self::mediaKeysOfStage($catalog, $stageKey);
+        if ($keys === []) {
+            return [];
+        }
+
+        return SubmissionMedia::query()
+            ->where('submission_id', $parent->id)
+            ->whereIn('question_key', $keys)
+            ->where('state', '!=', MediaState::Uploaded->value)
+            ->orderBy('question_key')
+            ->orderBy('repeat_index')
+            ->get()
+            ->map(fn (SubmissionMedia $media) => [
+                'question_key' => (string) $media->question_key,
+                'repeat_index' => $media->repeat_index,
+                'sha256' => (string) $media->sha256,
+                'upload_url' => sprintf(
+                    '/mobile/follow-ups/%s/%s/media/%s',
+                    $parent->uuid,
+                    $stageKey,
+                    $media->question_key,
+                ),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Clés des questions média déclarées par une étape.
+     *
+     * @return list<string>
+     */
+    public static function mediaKeysOfStage(QuestionCatalog $catalog, string $stageKey): array
+    {
+        $keys = [];
+        foreach ($catalog->all() as $key => $info) {
+            if (($info['stage'] ?? null) === $stageKey
+                && in_array((string) ($info['type'] ?? ''), self::MEDIA_QUESTION_TYPES, true)) {
+                $keys[] = (string) $key;
+            }
+        }
+
+        return $keys;
     }
 
     // ==================================================================== moteur / définition

@@ -12,12 +12,15 @@ use App\Models\EnumeratorAssignment;
 use App\Models\FollowUpEntry;
 use App\Models\ProjectMember;
 use App\Models\Submission;
+use App\Models\SubmissionMedia;
 use App\Models\Survey;
 use App\Models\SurveyProject;
 use App\Models\SurveyVersion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -263,6 +266,102 @@ class FollowUpTest extends TestCase
         $this->assertSame(0, Submission::query()->count() - 1, 'un suivi ne crée pas de nouvelle soumission');
     }
 
+    /**
+     * Voie de compatibilité du contrat (`syncSubmissions` : « réponses de suivi acceptées ici,
+     * routées vers la même logique »). `SubmissionSyncService` ignorait `followup_stage` et
+     * `parent_submission_uuid` : l'étape devenait une soumission de plus et l'entrée restait
+     * `pending` (écart M-11). Elle est désormais déléguée à `FollowUpService`.
+     */
+    public function test_a_stage_answer_sent_to_the_submissions_endpoint_is_delegated_to_the_follow_ups(): void
+    {
+        $submission = $this->receive(self::DEPOSIT_UUID);
+        Carbon::setTestNow($submission->ended_at->copy()->addDays(4));
+
+        $answers = ['j4_rappel_envoye' => 'oui', 'j4_date_envoi' => Carbon::now()->toDateString()];
+
+        $response = $this->actingAs($this->enumerator, 'sanctum')->postJson('/api/mobile/submissions', [
+            'submissions' => [$this->followUpPayload($submission, 'j4', $answers)],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.results.0.status', 'accepted')
+            ->assertJsonPath('data.results.0.stage_key', 'j4')
+            ->assertJsonPath('data.results.0.entry_status', 'done')
+            ->assertJsonPath('data.results.0.parent_submission_uuid', $submission->uuid);
+
+        $entry = FollowUpEntry::query()->where('submission_id', $submission->id)->where('stage_key', 'j4')->firstOrFail();
+        $this->assertSame(FollowUpStatus::Done, $entry->status);
+        $this->assertSame($answers, $entry->answers);
+        $this->assertSame(1, Submission::query()->count(), 'aucune soumission supplémentaire');
+    }
+
+    // ================================================================== médias d'étape
+
+    /**
+     * Un média capturé dans une étape n'avait aucune cible d'envoi (`pending_media` toujours `[]`,
+     * écart B-08). Il est désormais rattaché à la soumission **parente** et envoyé sur
+     * `POST /mobile/follow-ups/{parentUuid}/{stageKey}/media/{questionKey}`.
+     */
+    public function test_a_stage_media_is_announced_then_uploaded_on_the_parent_submission(): void
+    {
+        Storage::fake('local');
+        $this->declareStagePhoto('j4', 'j4_preuve_envoi');
+
+        $submission = $this->receive(self::DEPOSIT_UUID);
+        Carbon::setTestNow($submission->ended_at->copy()->addDays(4));
+
+        $content = 'preuve-du-rappel-j4';
+        $sha = hash('sha256', $content);
+        $payload = $this->followUpPayload($submission, 'j4', [
+            'j4_rappel_envoye' => 'oui',
+            'j4_date_envoi' => Carbon::now()->toDateString(),
+            'j4_preuve_envoi' => ['sha256' => $sha, 'mime' => 'image/jpeg', 'size' => strlen($content)],
+        ]);
+        $payload['media'] = [[
+            'question_key' => 'j4_preuve_envoi',
+            'repeat_index' => null,
+            'sha256' => $sha,
+            'mime' => 'image/jpeg',
+            'size' => strlen($content),
+        ]];
+
+        $this->syncFollowUps([$payload])
+            ->assertOk()
+            ->assertJsonPath('data.results.0.status', 'accepted')
+            ->assertJsonPath('data.results.0.pending_media.0.question_key', 'j4_preuve_envoi')
+            ->assertJsonPath('data.results.0.pending_media.0.sha256', $sha)
+            ->assertJsonPath(
+                'data.results.0.pending_media.0.upload_url',
+                "/mobile/follow-ups/{$submission->uuid}/j4/media/j4_preuve_envoi",
+            );
+
+        $this->uploadStageMedia($submission->uuid, 'j4', 'j4_preuve_envoi', $content)
+            ->assertStatus(201)
+            ->assertJsonPath('data.status', 'uploaded')
+            ->assertJsonPath('data.question_key', 'j4_preuve_envoi');
+
+        $media = SubmissionMedia::query()->where('submission_id', $submission->id)->firstOrFail();
+        $this->assertSame('j4_preuve_envoi', $media->question_key);
+        $this->assertTrue($media->isUploaded());
+        Storage::disk('local')->assertExists((string) $media->path);
+
+        // Fichier reçu : l'étape renvoyée n'attend plus rien.
+        $this->syncFollowUps([$payload])
+            ->assertOk()
+            ->assertJsonPath('data.results.0.status', 'duplicate')
+            ->assertJsonPath('data.results.0.pending_media', []);
+
+        // Une clé qui n'appartient pas à l'étape visée est refusée.
+        $this->uploadStageMedia($submission->uuid, 'j4', 'photo_recu_momo', $content)->assertStatus(422);
+
+        // Un enquêteur étranger à la fiche ne peut pas envoyer son média.
+        $this->actingAs($this->stranger, 'sanctum')->post(
+            "/api/mobile/follow-ups/{$submission->uuid}/j4/media/j4_preuve_envoi",
+            ['sha256' => $sha, 'file' => UploadedFile::fake()->createWithContent('preuve.jpg', $content)],
+            ['Accept' => 'application/json'],
+        )->assertStatus(403);
+    }
+
     public function test_invalid_follow_up_answers_are_rejected_per_item(): void
     {
         $submission = $this->receive(self::DEPOSIT_UUID);
@@ -483,6 +582,39 @@ class FollowUpTest extends TestCase
             'status' => 'completed',
             'answers' => $answers,
         ];
+    }
+
+    /**
+     * Ajoute une question `photo` à une étape de la version publiée (MunaGo n'en déclare aucune).
+     */
+    private function declareStagePhoto(string $stageKey, string $questionKey): void
+    {
+        $definition = $this->version->definition;
+        foreach ($definition['follow_up_stages'] as $index => $stage) {
+            if (($stage['key'] ?? null) === $stageKey) {
+                $definition['follow_up_stages'][$index]['items'][] = [
+                    'key' => $questionKey,
+                    'type' => 'photo',
+                    'source' => 'camera',
+                    'label' => ['fr' => 'Preuve du rappel', 'en' => 'Reminder proof'],
+                ];
+            }
+        }
+
+        $this->version->forceFill(['definition' => $definition])->save();
+        $this->version->refresh();
+    }
+
+    private function uploadStageMedia(string $parentUuid, string $stageKey, string $questionKey, string $content): TestResponse
+    {
+        return $this->actingAs($this->enumerator, 'sanctum')->post(
+            "/api/mobile/follow-ups/{$parentUuid}/{$stageKey}/media/{$questionKey}",
+            [
+                'sha256' => hash('sha256', $content),
+                'file' => UploadedFile::fake()->createWithContent('preuve.jpg', $content),
+            ],
+            ['Accept' => 'application/json', 'Idempotency-Key' => (string) Str::uuid()],
+        );
     }
 
     /**

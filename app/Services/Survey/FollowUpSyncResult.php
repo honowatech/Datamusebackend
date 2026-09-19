@@ -36,6 +36,7 @@ final class FollowUpSyncResult
     /**
      * @param  list<array<string, mixed>>|null  $errors  `DfsIssue[]`
      * @param  array<string, list<string>>  $errorsByKey
+     * @param  list<array{question_key: string, repeat_index: int|null, sha256: string, upload_url: string}>  $pendingMedia
      */
     public function __construct(
         public readonly string $uuid,
@@ -47,9 +48,13 @@ final class FollowUpSyncResult
         public readonly ?array $errors = null,
         public readonly array $errorsByKey = [],
         public readonly ?string $conflictReason = null,
+        public readonly array $pendingMedia = [],
     ) {}
 
-    public static function stored(string $uuid, string $status, FollowUpEntry $entry, ?string $parentUuid): self
+    /**
+     * @param  list<array{question_key: string, repeat_index: int|null, sha256: string, upload_url: string}>  $pendingMedia
+     */
+    public static function stored(string $uuid, string $status, FollowUpEntry $entry, ?string $parentUuid, array $pendingMedia = []): self
     {
         return new self(
             uuid: $uuid,
@@ -58,10 +63,14 @@ final class FollowUpSyncResult
             stageKey: $entry->stage_key,
             entryId: $entry->id,
             entryStatus: $entry->status->value,
+            pendingMedia: $pendingMedia,
         );
     }
 
-    public static function duplicate(string $uuid, ?FollowUpEntry $entry, ?string $parentUuid, ?string $stageKey = null): self
+    /**
+     * @param  list<array{question_key: string, repeat_index: int|null, sha256: string, upload_url: string}>  $pendingMedia
+     */
+    public static function duplicate(string $uuid, ?FollowUpEntry $entry, ?string $parentUuid, ?string $stageKey = null, array $pendingMedia = []): self
     {
         return new self(
             uuid: $uuid,
@@ -70,6 +79,7 @@ final class FollowUpSyncResult
             stageKey: $entry?->stage_key ?? $stageKey,
             entryId: $entry?->id,
             entryStatus: $entry?->status->value,
+            pendingMedia: $pendingMedia,
         );
     }
 
@@ -116,8 +126,9 @@ final class FollowUpSyncResult
             'status' => $this->status,
             'entry_id' => $this->entryId,
             'entry_status' => $this->entryStatus,
-            // Les médias de suivi ne sont pas gérés par ce canal (cf. docs/AVANCEMENT.md, écarts B-08).
-            'pending_media' => [],
+            // Rattachés à la soumission parente et envoyés sur
+            // `POST /mobile/follow-ups/{parentUuid}/{stageKey}/media/{questionKey}`.
+            'pending_media' => $this->pendingMedia,
         ];
 
         if ($this->errors !== null) {

@@ -197,6 +197,12 @@ Route::prefix('mobile')->middleware(['server.time', 'auth:sanctum', 'throttle:mo
     // ==== B-08 ==== Suivis longitudinaux (README DFS § 14)
     Route::get('/follow-ups/due', [FollowUpController::class, 'index'])->name('mobile.followups.due');
     Route::post('/follow-ups', [FollowUpController::class, 'store'])->name('mobile.followups.sync');
+    // Média capturé dans une étape : stocké sur la soumission **parente** (l'étape n'en crée pas).
+    Route::post('/follow-ups/{parentUuid}/{stageKey}/media/{questionKey}', [MediaUploadController::class, 'storeStage'])
+        ->whereUuid('parentUuid')
+        ->where('stageKey', '[A-Za-z][A-Za-z0-9_]{0,39}')
+        ->where('questionKey', '[A-Za-z][A-Za-z0-9_]{0,39}')
+        ->name('mobile.followups.media');
 });
 
 // ==== B-07 ==== Médias : URL signée temporaire (Storage privé), nommée pour URL::temporarySignedRoute()
