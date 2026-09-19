@@ -75,6 +75,9 @@ class Submission extends Model
         'reviewed_by',
         'reviewed_at',
         'device_time_offset_ms',
+        // ==== E-01 ==== version de l'application ayant transmis la fiche (`X-App-Version`)
+        'app_version',
+        // ==== /E-01 ====
     ];
 
     protected $attributes = [

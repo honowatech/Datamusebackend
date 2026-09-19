@@ -6,6 +6,7 @@ use App\Http\Controllers\ApiController;
 use App\Http\Requests\Mobile\RegisterDeviceRequest;
 use App\Http\Resources\DeviceResource;
 use App\Models\Device;
+use App\Services\Survey\SubmissionSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
 
@@ -33,7 +34,10 @@ class DeviceController extends ApiController
             'device_id' => $data['device_id'],
             'platform' => $data['platform'],
             'model' => $data['model'] ?? $device->model,
-            'app_version' => $data['app_version'],
+            // E-01 : le corps fait foi ; à défaut, l'en-tête `X-App-Version` du client mobile.
+            'app_version' => $data['app_version']
+                ?? SubmissionSyncService::normalizeAppVersion($request->header(SubmissionSyncService::APP_VERSION_HEADER))
+                ?? $device->app_version,
             'push_token' => array_key_exists('push_token', $data) ? $data['push_token'] : $device->push_token,
             'last_seen_at' => now(),
         ])->save();

@@ -35,7 +35,13 @@ class SubmissionSyncController extends ApiController
             );
         }
 
-        $results = $this->sync->syncBatch($request->user(), $payloads);
+        // E-01 : le mobile marque chaque envoi avec `X-App-Version` (M-09) ; la version est
+        // rafraîchie sur `devices.app_version` et figée sur chaque `submissions.app_version`.
+        $results = $this->sync->syncBatch(
+            $request->user(),
+            $payloads,
+            appVersion: $request->header(SubmissionSyncService::APP_VERSION_HEADER),
+        );
 
         return $this->ok([
             'results' => SubmissionSyncResultResource::collection($results),

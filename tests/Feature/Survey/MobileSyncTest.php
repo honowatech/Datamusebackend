@@ -128,6 +128,62 @@ class MobileSyncTest extends TestCase
         $this->assertNull($second->json('data.time_offset_ms'));
     }
 
+    // ==== E-01 ====
+    /**
+     * `X-App-Version` (envoyé par le mobile sur `POST /mobile/submissions`, M-09) rafraîchit
+     * `devices.app_version` et est figé sur `submissions.app_version` ; le détail web le rend.
+     */
+    public function test_the_app_version_header_updates_the_device_and_is_frozen_on_the_submission(): void
+    {
+        $this->actingAs($this->enumerator, 'sanctum')->postJson('/api/mobile/devices', [
+            'device_id' => 'android-enq1-a3f1',
+            'platform' => 'android',
+            'app_version' => '1.0.0+1',
+        ])->assertOk();
+
+        $payload = $this->payloadAt(0);
+        $payload['device_id'] = 'android-enq1-a3f1';
+
+        $this->actingAs($this->enumerator, 'sanctum')
+            ->withHeader('X-App-Version', '1.4.2+31')
+            ->postJson('/api/mobile/submissions', ['submissions' => [$payload]])
+            ->assertOk()
+            ->assertJsonPath('data.results.0.status', 'accepted');
+
+        $device = Device::query()->where('device_id', 'android-enq1-a3f1')->firstOrFail();
+        $this->assertSame('1.4.2+31', $device->app_version);
+
+        $submission = Submission::query()->where('uuid', $payload['uuid'])->firstOrFail();
+        $this->assertSame('1.4.2+31', $submission->app_version);
+
+        // Un renvoi sans l'en-tête ne doit pas effacer la version figée.
+        $this->sync([$payload])->assertOk();
+        $this->assertSame('1.4.2+31', $submission->fresh()->app_version);
+
+        $this->actingAs($this->owner, 'sanctum')
+            ->getJson('/api/submissions/'.$submission->id)
+            ->assertOk()
+            ->assertJsonPath('data.device.app_version', '1.4.2+31');
+    }
+
+    /** Sans en-tête, rien n'est inventé : la fiche n'hérite que de la version connue de l'appareil. */
+    public function test_a_submission_without_the_header_falls_back_to_the_device_version(): void
+    {
+        $this->actingAs($this->enumerator, 'sanctum')->postJson('/api/mobile/devices', [
+            'device_id' => 'android-enq1-a3f1',
+            'platform' => 'android',
+            'app_version' => '1.0.0+1',
+        ])->assertOk();
+
+        $payload = $this->payloadAt(1);
+        $payload['device_id'] = 'android-enq1-a3f1';
+
+        $this->sync([$payload])->assertOk()->assertJsonPath('data.results.0.status', 'accepted');
+
+        $this->assertSame('1.0.0+1', Submission::query()->where('uuid', $payload['uuid'])->value('app_version'));
+    }
+    // ==== /E-01 ====
+
     // ================================================================== manifest
 
     public function test_manifest_lists_assigned_survey_with_assignment_quotas_and_etag(): void

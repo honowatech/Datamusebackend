@@ -91,7 +91,9 @@ class SubmissionController extends ApiController
             'flag_details' => $this->quality->flagDetails($submission, $settings),
             'device' => [
                 'device_id' => $submission->device?->device_id,
-                'app_version' => $submission->device?->app_version,
+                // E-01 : version figée à la réception (`submissions.app_version`), sinon version
+                // courante de l'appareil — un appareil mis à jour ne réécrit pas l'historique.
+                'app_version' => $submission->app_version ?? $submission->device?->app_version,
                 'time_offset_ms' => $submission->device_time_offset_ms,
             ],
         ];

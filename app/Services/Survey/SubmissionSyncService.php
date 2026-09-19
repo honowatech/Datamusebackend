@@ -61,6 +61,28 @@ class SubmissionSyncService
     /** Durée de mémorisation d'un uuid rejeté par le moteur (pour renvoyer `updated` au renvoi). */
     public const REJECTED_MEMORY_DAYS = 7;
 
+    // ==== E-01 ====
+    /** Longueur maximale retenue pour `devices.app_version` / `submissions.app_version`. */
+    public const APP_VERSION_MAX = 40;
+
+    /** En-tête portant la version de l'application appelante (contrat `/mobile/*`). */
+    public const APP_VERSION_HEADER = 'X-App-Version';
+
+    /** Version applicative du lot en cours (`X-App-Version`), `null` hors mobile. */
+    private ?string $appVersion = null;
+
+    /** Normalise l'en-tête : chaîne non vide, tronquée, sinon `null`. */
+    public static function normalizeAppVersion(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+        $value = trim($value);
+
+        return $value === '' ? null : mb_substr($value, 0, self::APP_VERSION_MAX);
+    }
+    // ==== /E-01 ====
+
     public function __construct(
         private readonly SubmissionQualityService $quality = new SubmissionQualityService,
         private readonly FicheCodeGenerator $ficheCodes = new FicheCodeGenerator,
@@ -72,11 +94,15 @@ class SubmissionSyncService
      * @param  list<array<string, mixed>>  $payloads
      * @return list<SubmissionSyncResult>
      */
-    public function syncBatch(?User $user, array $payloads, SubmissionChannel $channel = SubmissionChannel::Mobile): array
-    {
+    public function syncBatch(
+        ?User $user,
+        array $payloads,
+        SubmissionChannel $channel = SubmissionChannel::Mobile,
+        ?string $appVersion = null,
+    ): array {
         $results = [];
         foreach ($payloads as $payload) {
-            $results[] = $this->sync($user, is_array($payload) ? $payload : [], $channel);
+            $results[] = $this->sync($user, is_array($payload) ? $payload : [], $channel, $appVersion);
         }
 
         return $results;
@@ -88,8 +114,15 @@ class SubmissionSyncService
      *
      * @param  array<string, mixed>  $payload
      */
-    public function sync(?User $user, array $payload, SubmissionChannel $channel = SubmissionChannel::Mobile): SubmissionSyncResult
-    {
+    public function sync(
+        ?User $user,
+        array $payload,
+        SubmissionChannel $channel = SubmissionChannel::Mobile,
+        ?string $appVersion = null,
+    ): SubmissionSyncResult {
+        // ==== E-01 ==== Version applicative de l'appelant (en-tête `X-App-Version` du mobile).
+        $this->appVersion = self::normalizeAppVersion($appVersion);
+        // ==== /E-01 ====
         $uuid = strtolower((string) ($payload['uuid'] ?? ''));
         if ($uuid === '') {
             return SubmissionSyncResult::rejected('', [self::issue('/uuid', 'required', 'uuid manquant.')], ['uuid' => ['uuid manquant.']]);
@@ -428,6 +461,9 @@ class SubmissionSyncService
                 'device_time_offset_ms' => isset($payload['device_time_offset_ms']) && is_numeric($payload['device_time_offset_ms'])
                     ? (int) $payload['device_time_offset_ms']
                     : null,
+                // E-01 : version figée à la réception (`X-App-Version`) ; un renvoi sans en-tête
+                // ne l'efface pas, et `devices.app_version` reste la version *courante*.
+                'app_version' => $this->appVersion ?? $submission->app_version ?? $device?->app_version,
             ])->save();
 
             $pendingMedia = $this->syncDeclaredMedia($submission, $engine, $payload);
@@ -553,7 +589,13 @@ class SubmissionSyncService
         }
 
         $device = Device::query()->firstOrNew(['user_id' => $user->id, 'device_id' => $deviceId]);
-        $device->forceFill(['last_seen_at' => now()])->save();
+        $attributes = ['last_seen_at' => now()];
+        // E-01 : `X-App-Version` tient `devices.app_version` à jour à chaque synchronisation,
+        // sans attendre un nouvel appel à `POST /mobile/devices`.
+        if ($this->appVersion !== null) {
+            $attributes['app_version'] = $this->appVersion;
+        }
+        $device->forceFill($attributes)->save();
 
         return $device;
     }
