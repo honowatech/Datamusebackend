@@ -6,6 +6,7 @@ use App\Enums\JobStatus;
 use App\Models\AiJob;
 use App\Models\Survey;
 use App\Models\SurveyReport;
+use App\Services\LlmProviderService;
 use App\Services\Survey\ReportMarkdownRenderer;
 use App\Services\Survey\SurveyAiService;
 use App\Services\Survey\SurveyInsightContext;
@@ -99,8 +100,8 @@ class GenerateSurveyReportJob implements ShouldQueue
                 'status' => JobStatus::Done,
                 'content_json' => $content,
                 'content_md' => $renderer->render($content),
-                'provider' => $this->provider,
-                'model' => config("services.{$this->provider}.model"),
+                'provider' => LlmProviderService::effectiveProvider($this->provider),
+                'model' => LlmProviderService::effectiveModel($this->provider),
                 'error' => null,
             ])->mergeMeta(['content_json_stale' => null])->save();
 

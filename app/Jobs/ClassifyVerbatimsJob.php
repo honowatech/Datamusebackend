@@ -78,6 +78,7 @@ class ClassifyVerbatimsJob implements ShouldQueue
             $opts = [
                 'provider' => $this->provider,
                 'api_key' => $apiKey,
+                'question_key' => $key,
                 'question_label' => $question['label'],
                 'language' => $language,
             ];

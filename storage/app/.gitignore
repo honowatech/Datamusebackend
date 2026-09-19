@@ -2,3 +2,7 @@
 !private/
 !public/
 !.gitignore
+# E-03 — corpus de réponses IA rejouées (LLM_DRIVER=replay) : versionné, il sert de
+# démonstration hors ligne et de jeu de tests.
+!llm-replay/
+!llm-replay/**

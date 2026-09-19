@@ -55,8 +55,11 @@ class SqlGenerationService
         }
         $messages[] = ["role" => "user", "content" => $userPrompt];
 
-        // 5. Call LLM
-        $aiResponse = $this->llmProvider->generate($provider, $apiKey, $messages, $systemInstruction);
+        // 5. Call LLM (`prompt_name` : trace, et clé de sélection du mode rejeu)
+        $aiResponse = $this->llmProvider->generate($provider, $apiKey, $messages, $systemInstruction, [
+            'prompt_name' => $promptName,
+            'replay_vars' => ['category' => $category, 'driver' => $driver],
+        ]);
 
         // 6. Clean and parse JSON response
         return $this->parseLlmResponse($aiResponse);

@@ -35,8 +35,10 @@ class LlmRouterService
         try {
             // We can force using Gemini for the router if we want it to be fast and cheap,
             // but for now we'll stick to the user's chosen provider.
-            $response = $this->llmProvider->generate($provider, $apiKey, $messages, $systemInstruction);
-            
+            $response = $this->llmProvider->generate($provider, $apiKey, $messages, $systemInstruction, [
+                'prompt_name' => 'router',
+            ]);
+
             $response = trim(strtoupper($response));
             
             if (str_contains($response, 'COMPLEXE')) return 'COMPLEXE';

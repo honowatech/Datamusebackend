@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\User;
+use App\Services\LlmProviderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 
@@ -12,6 +13,9 @@ use Illuminate\Support\Facades\Crypt;
  *
  * Pour les jobs asynchrones, `resolveForJob()` renvoie la clé chiffrée (Crypt) à placer dans `ai_jobs.input` ;
  * le job la déchiffre avec `decryptForJob()`. La clé n'est jamais stockée en clair.
+ *
+ * **Mode rejeu** (`LLM_DRIVER=replay`) : aucune clé n'est exigée — la résolution renvoie un jeton factice
+ * (`REPLAY_PLACEHOLDER`) pour que la chaîne complète (contrôleur → job → service) reste inchangée.
  */
 class ApiKeyResolver
 {
@@ -24,6 +28,9 @@ class ApiKeyResolver
 
     public const REQUEST_FIELD = 'apiKey';
 
+    /** Jeton sans valeur, jamais envoyé sur le réseau : il n'existe que pour traverser la chaîne en rejeu. */
+    public const REPLAY_PLACEHOLDER = 'replay-no-key-needed';
+
     /**
      * Fournisseur canonique : tout ce qui n'est pas `deepseek` est traité comme `gemini` (comportement historique).
      */
@@ -34,6 +41,10 @@ class ApiKeyResolver
 
     public function resolve(?Request $request, User $user, string $provider): ?string
     {
+        if (LlmProviderService::isReplay()) {
+            return self::REPLAY_PLACEHOLDER;
+        }
+
         $provider = self::normalizeProvider($provider);
 
         $fromRequest = $request?->input(self::REQUEST_FIELD);

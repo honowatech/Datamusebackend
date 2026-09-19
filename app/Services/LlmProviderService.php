@@ -7,7 +7,7 @@ use Exception;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Appels HTTP bruts vers Gemini / DeepSeek.
+ * Appels HTTP bruts vers Gemini / DeepSeek — ou **rejeu local** lorsque `LLM_DRIVER=replay`.
  *
  * Options (toutes facultatives, rétro-compatible avec l'ancienne signature) :
  *  - `json_mode`   (bool)   : Gemini `generationConfig.response_mime_type=application/json`,
@@ -16,10 +16,21 @@ use Illuminate\Support\Facades\Http;
  *  - `max_tokens`  (int)    : Gemini `maxOutputTokens`, DeepSeek `max_tokens`.
  *  - `model`       (string) : défaut `config('services.<provider>.model')`.
  *  - `timeout`     (int)    : secondes, défaut 60.
+ *  - `prompt_name` (string) : **obligatoire en mode rejeu** — nom du prompt système appelé, qui désigne
+ *                             le dossier de `storage/app/llm-replay/` (voir `LlmReplayProvider`).
+ *  - `replay_vars` (array)  : paramètres de sélection du rejeu (`question_key`, `heading`, `target_lang`…).
  */
 class LlmProviderService
 {
     public const DEFAULT_TIMEOUT = 60;
+
+    /** Appels réels vers le fournisseur configuré. */
+    public const DRIVER_LIVE = 'live';
+
+    /** Rejeu local, sans réseau ni clé API (développement / démonstration seulement). */
+    public const DRIVER_REPLAY = 'replay';
+
+    public function __construct(private readonly ?LlmReplayProvider $replay = null) {}
 
     /**
      * @param  array<int, array{role: string, content: string}>  $messages
@@ -27,6 +38,10 @@ class LlmProviderService
      */
     public function generate(string $provider, string $apiKey, array $messages, ?string $systemInstruction = null, array $options = []): string
     {
+        if (self::isReplay()) {
+            return ($this->replay ?? new LlmReplayProvider)->generate($messages, $systemInstruction, $options);
+        }
+
         $provider = ApiKeyResolver::normalizeProvider($provider);
 
         if ($provider === ApiKeyResolver::DEEPSEEK) {
@@ -34,6 +49,42 @@ class LlmProviderService
         }
 
         return $this->callGemini($apiKey, $messages, $systemInstruction, $options);
+    }
+
+    // ------------------------------------------------------------------ pilote
+
+    public static function driver(): string
+    {
+        return strtolower((string) (config('services.llm.driver') ?: self::DRIVER_LIVE));
+    }
+
+    public static function isReplay(): bool
+    {
+        if (self::driver() !== self::DRIVER_REPLAY) {
+            return false;
+        }
+
+        // Le garde-fou de production lève ici, avant toute écriture en base.
+        LlmReplayProvider::assertAllowed();
+
+        return true;
+    }
+
+    /**
+     * Fournisseur à **inscrire** (`ai_jobs.provider`, `survey_reports.provider`) : `replay` en rejeu,
+     * sinon le fournisseur demandé, normalisé.
+     */
+    public static function effectiveProvider(?string $provider): string
+    {
+        return self::isReplay() ? LlmReplayProvider::PROVIDER : ApiKeyResolver::normalizeProvider($provider);
+    }
+
+    /**
+     * Modèle à **inscrire** : `replay` en rejeu, sinon le modèle configuré du fournisseur.
+     */
+    public static function effectiveModel(?string $provider): string
+    {
+        return self::isReplay() ? LlmReplayProvider::PROVIDER : self::defaultModel((string) $provider);
     }
 
     public static function defaultModel(string $provider): string

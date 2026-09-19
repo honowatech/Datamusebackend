@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\AiJob;
 use App\Models\Survey;
 use App\Models\SurveyReport;
+use App\Services\LlmProviderService;
 use App\Services\Survey\ReportMarkdownRenderer;
 use App\Services\Survey\SurveyAiService;
 use App\Services\Survey\SurveyInsightContext;
@@ -100,8 +101,8 @@ class RegenerateReportSectionJob implements ShouldQueue
             $report->forceFill([
                 'content_json' => $content,
                 'content_md' => $replaced ?? $renderer->render($content),
-                'provider' => $this->provider,
-                'model' => config("services.{$this->provider}.model"),
+                'provider' => LlmProviderService::effectiveProvider($this->provider),
+                'model' => LlmProviderService::effectiveModel($this->provider),
             ])->mergeMeta(['content_json_stale' => null])->save();
 
             $job->markDone(

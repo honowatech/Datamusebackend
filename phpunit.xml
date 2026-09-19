@@ -32,5 +32,10 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- IA : la suite simule les appels par Http::fake() ; les tests du rejeu basculent
+             eux-mêmes `services.llm.driver`. Latence à zéro pour ne pas ralentir la suite. -->
+        <env name="LLM_DRIVER" value="live"/>
+        <env name="LLM_REPLAY_LATENCY_MIN_MS" value="0"/>
+        <env name="LLM_REPLAY_LATENCY_MAX_MS" value="0"/>
     </php>
 </phpunit>

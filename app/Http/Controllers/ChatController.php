@@ -6,7 +6,6 @@ use App\Models\TargetDatabase;
 use App\Models\BusinessMetric;
 use App\Support\ApiKeyResolver;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Exception;
@@ -178,8 +177,12 @@ class ChatController extends Controller
             
             $query = trim(str_replace(';', '', $request->sql_query));
             
-            // Clean query check for basic write command protection
-            $isSelect = stripos($query, 'select') === 0 || stripos($query, 'show') === 0;
+            // Clean query check for basic write command protection.
+            // E-03 : `WITH …` (CTE, y compris `WITH RECURSIVE`) est une lecture. Sans ce cas, la question
+            // « quels sont les freins les plus cités ? » — dont la requête éclate une colonne multi-valuée
+            // avec une CTE récursive — partait dans la branche d'écriture : le chat répondait « Requête de
+            // modification effectuée avec succès » et n'affichait aucune ligne.
+            $isSelect = preg_match('/^\s*(select|show|with)\b/i', $query) === 1;
 
             if ($isSelect) {
                 // Double protection: block multi-query statements and non-read queries containing hazardous keywords
@@ -247,42 +250,25 @@ Instructions :
 - Fournis des recommandations et des insights métier actionnables.
 - Ne cite pas de code SQL. Sois clair, professionnel, et retourne le résultat en Markdown riche (listes à puces, texte en gras, sans bloc ```markdown global).";
         
-        $promptText = "Question initiale : " . $request->prompt . "\n\nExtrait des résultats (50 premières lignes max) : \n" . json_encode($request->data_summary);
+        // JSON_UNESCAPED_UNICODE : sans cela « Enquêteur » arrive au modèle sous la forme
+        // « Enquêteur », qu'il recopie tel quel dans son analyse (constaté en E-03).
+        $json = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+        $promptText = "Question initiale : " . $request->prompt . "\n\nExtrait des résultats (50 premières lignes max) : \n" . json_encode($request->data_summary, $json);
 
         if ($request->has('statistical_profile') && !empty($request->statistical_profile)) {
-            $promptText .= "\n\nProfil statistique complet du dataset : \n" . json_encode($request->statistical_profile);
+            $promptText .= "\n\nProfil statistique complet du dataset : \n" . json_encode($request->statistical_profile, $json);
         }
 
         try {
-            if ($provider === 'deepseek') {
-                $response = Http::withHeaders([
-                    'Authorization' => "Bearer {$apiKey}",
-                    'Content-Type' => 'application/json',
-                ])->post("https://api.deepseek.com/v1/chat/completions", [
-                    "model" => \App\Services\LlmProviderService::defaultModel('deepseek'),
-                    "messages" => [
-                        ["role" => "system", "content" => $systemInstruction],
-                        ["role" => "user", "content" => $promptText]
-                    ],
-                    "stream" => false
-                ]);
-
-                if ($response->failed()) throw new Exception($response->body());
-                $data = $response->json();
-                $aiResponse = $data['choices'][0]['message']['content'] ?? '';
-            } else {
-                $response = Http::post(
-                    "https://generativelanguage.googleapis.com/v1beta/models/" . \App\Services\LlmProviderService::defaultModel('gemini') . ":generateContent?key={$apiKey}",
-                    [
-                        "system_instruction" => ["parts" => [["text" => $systemInstruction]]],
-                        "contents" => [["role" => "user", "parts" => [["text" => $promptText]]]]
-                    ]
-                );
-
-                if ($response->failed()) throw new Exception($response->body());
-                $data = $response->json();
-                $aiResponse = $data['candidates'][0]['content']['parts'][0]['text'] ?? '';
-            }
+            // Passe par LlmProviderService (et non Http:: en direct) : un seul point d'appel, donc un seul
+            // endroit où le mode rejeu (LLM_DRIVER=replay) s'applique.
+            $aiResponse = app(\App\Services\LlmProviderService::class)->generate(
+                $provider,
+                $apiKey,
+                [['role' => 'user', 'content' => $promptText]],
+                $systemInstruction,
+                ['prompt_name' => 'chat_analysis'],
+            );
 
             return response()->json([
                 'success' => true,

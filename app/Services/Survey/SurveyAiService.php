@@ -82,7 +82,10 @@ class SurveyAiService
         ]);
 
         $job->setProgress(40, 'Structuration des sections et des questions…');
-        $raw = $this->call($opts, $system, $this->sourceMessage($sourceText, $opts['title'] ?? null));
+        $raw = $this->call($opts, 'form_generation', $system, $this->sourceMessage($sourceText, $opts['title'] ?? null), true, [
+            'default_language' => $default,
+            'title' => (string) ($opts['title'] ?? ''),
+        ]);
 
         $job->setProgress(80, 'Validation de la structure…');
         [$definition, $result] = $this->parseAndValidate($raw, $languages, $default);
@@ -94,7 +97,9 @@ class SurveyAiService
                 '{dfs_guide}' => DfsPromptGuide::text(),
                 '{errors}' => $this->formatIssues($result->errors),
             ]);
-            $raw = $this->call($opts, $repairSystem, "Document à corriger :\n\n".$raw);
+            $raw = $this->call($opts, 'form_repair', $repairSystem, "Document à corriger :\n\n".$raw, true, [
+                'default_language' => $default,
+            ]);
             [$definition, $result] = $this->parseAndValidate($raw, $languages, $default);
         }
 
@@ -148,7 +153,7 @@ class SurveyAiService
                     sprintf('Traduction des libellés (%d/%d)…', $i + 1, $total),
                 );
 
-                $translated = $this->translateBatch($batch, $system, $opts);
+                $translated = $this->translateBatch($batch, $system, $opts, $source, $target);
                 foreach ($batch as $entry) {
                     $text = $translated[$entry['path']] ?? null;
                     if (is_string($text) && trim($text) !== '') {
@@ -202,7 +207,7 @@ class SurveyAiService
      * Construit un livre de codes à partir d'un échantillon de verbatims (prompt `verbatim_discover`).
      *
      * @param  list<string>  $texts
-     * @param  array{provider?: string, api_key: string, question_label?: string, max_themes?: int, language?: string}  $opts
+     * @param  array{provider?: string, api_key: string, question_key?: string, question_label?: string, max_themes?: int, language?: string}  $opts
      * @return list<array<string, mixed>> thèmes normalisés (`VerbatimService::normalizeThemes`)
      *
      * @throws RuntimeException réponse illisible ou sans thème exploitable
@@ -217,7 +222,10 @@ class SurveyAiService
             '{language}' => (string) ($opts['language'] ?? 'fr'),
         ]);
 
-        $raw = $this->call($opts, $system, $this->numberedList($texts));
+        $raw = $this->call($opts, 'verbatim_discover', $system, $this->numberedList($texts), true, [
+            'question_key' => (string) ($opts['question_key'] ?? ''),
+            'language' => (string) ($opts['language'] ?? 'fr'),
+        ]);
         $rows = self::rowsOf(self::decodeJson($raw), ['themes', 'items', 'data', 'results']);
 
         $themes = VerbatimService::normalizeThemes($rows, $max);
@@ -233,7 +241,7 @@ class SurveyAiService
      *
      * @param  list<array{ref: int|string, text: string}>  $batch
      * @param  list<array<string, mixed>>  $themes
-     * @param  array{provider?: string, api_key: string, question_label?: string, language?: string}  $opts
+     * @param  array{provider?: string, api_key: string, question_key?: string, question_label?: string, language?: string}  $opts
      * @return array<string, array{themes: list<string>, sentiment: ?string, confidence: ?float}> ref → codage
      */
     public function classifyBatch(array $batch, array $themes, array $opts): array
@@ -249,7 +257,10 @@ class SurveyAiService
             $batch,
         )), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-        $raw = $this->call($opts, $system, (string) $payload);
+        $raw = $this->call($opts, 'verbatim_classify', $system, (string) $payload, true, [
+            'question_key' => (string) ($opts['question_key'] ?? ''),
+            'language' => (string) ($opts['language'] ?? 'fr'),
+        ]);
         $rows = self::rowsOf(self::decodeJson($raw), ['codings', 'items', 'data', 'results']);
 
         $out = [];
@@ -285,7 +296,10 @@ class SurveyAiService
             '{language}' => (string) ($opts['language'] ?? 'fr'),
         ]);
 
-        $markdown = trim($this->call($opts, $system, $contextMarkdown, false));
+        $markdown = trim($this->call($opts, 'survey_synthesis', $system, $contextMarkdown, false, [
+            'language' => (string) ($opts['language'] ?? 'fr'),
+            'focus' => $focus,
+        ]));
         if ($markdown === '') {
             throw new RuntimeException('Le fournisseur IA a renvoyé une synthèse vide.');
         }
@@ -310,7 +324,13 @@ class SurveyAiService
     {
         $system = strtr($this->prompt('commercial_report'), $this->reportMarkers($brief));
 
-        $raw = $this->call($opts, $system, $this->briefMessage($brief, $contextMarkdown));
+        $raw = $this->call($opts, 'commercial_report', $system, $this->briefMessage($brief, $contextMarkdown), true, [
+            'orientation' => (string) ($brief['orientation'] ?? 'commercial'),
+            'audience' => (string) ($brief['audience'] ?? ''),
+            'tone' => (string) ($brief['tone'] ?? 'factuel'),
+            'length' => (string) ($brief['length'] ?? 'moyen'),
+            'language' => (string) ($brief['language'] ?? 'fr'),
+        ]);
         [$content, $errors] = $this->parseReport($raw);
 
         if ($errors !== []) {
@@ -318,7 +338,9 @@ class SurveyAiService
                 '{errors}' => ReportContentValidator::format($errors),
                 '{language}' => (string) ($brief['language'] ?? 'fr'),
             ]);
-            $raw = $this->call($opts, $repair, "Document à corriger :\n\n".$raw);
+            $raw = $this->call($opts, 'report_repair', $repair, "Document à corriger :\n\n".$raw, true, [
+                'kind' => 'report',
+            ]);
             [$content, $errors] = $this->parseReport($raw);
         }
 
@@ -358,7 +380,10 @@ class SurveyAiService
         $message = "SECTION ACTUELLE (JSON)\n".json_encode($section, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
             ."\n\nDONNÉES DE L'ENQUÊTE\n".$contextMarkdown;
 
-        $raw = $this->call($opts, $system, $message);
+        $raw = $this->call($opts, 'report_section', $system, $message, true, [
+            'heading' => (string) ($section['heading'] ?? ''),
+            'language' => (string) ($opts['language'] ?? 'fr'),
+        ]);
         [$rewritten, $errors] = $this->parseSection($raw, $section);
 
         if ($errors !== []) {
@@ -366,7 +391,10 @@ class SurveyAiService
                 '{errors}' => ReportContentValidator::format($errors),
                 '{language}' => (string) ($opts['language'] ?? 'fr'),
             ]);
-            $raw = $this->call($opts, $repair, "Section à corriger :\n\n".$raw);
+            $raw = $this->call($opts, 'report_repair', $repair, "Section à corriger :\n\n".$raw, true, [
+                'kind' => 'section',
+                'heading' => (string) ($section['heading'] ?? ''),
+            ]);
             [$rewritten, $errors] = $this->parseSection($raw, $section);
         }
 
@@ -556,9 +584,12 @@ class SurveyAiService
 
     /**
      * @param  array{provider?: string, api_key: string}  $opts
+     * @param  string  $promptName  nom du prompt système appelé : trace lisible et **clé de sélection du
+     *                              mode rejeu** (`storage/app/llm-replay/{promptName}/`)
      * @param  bool  $jsonMode  `false` pour une réponse markdown libre (synthèse)
+     * @param  array<string, mixed>  $replayVars  paramètres de sélection du rejeu (`question_key`, `heading`…)
      */
-    private function call(array $opts, string $system, string $userMessage, bool $jsonMode = true): string
+    private function call(array $opts, string $promptName, string $system, string $userMessage, bool $jsonMode = true, array $replayVars = []): string
     {
         $provider = ApiKeyResolver::normalizeProvider($opts['provider'] ?? null);
         $apiKey = (string) ($opts['api_key'] ?? '');
@@ -571,7 +602,13 @@ class SurveyAiService
             $apiKey,
             [['role' => 'user', 'content' => $userMessage]],
             $system,
-            ['json_mode' => $jsonMode, 'temperature' => self::TEMPERATURE, 'timeout' => self::TIMEOUT],
+            [
+                'json_mode' => $jsonMode,
+                'temperature' => self::TEMPERATURE,
+                'timeout' => self::TIMEOUT,
+                'prompt_name' => $promptName,
+                'replay_vars' => $replayVars,
+            ],
         );
 
         if (trim($text) === '') {
@@ -586,10 +623,13 @@ class SurveyAiService
      * @param  array{provider?: string, api_key: string}  $opts
      * @return array<string, string> path → traduction
      */
-    private function translateBatch(array $batch, string $system, array $opts): array
+    private function translateBatch(array $batch, string $system, array $opts, string $source = 'fr', string $target = 'en'): array
     {
         $payload = json_encode(array_values($batch), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $raw = $this->call($opts, $system, (string) $payload);
+        $raw = $this->call($opts, 'form_translation', $system, (string) $payload, true, [
+            'source_lang' => $source,
+            'target_lang' => $target,
+        ]);
 
         $decoded = self::decodeJson($raw);
         if ($decoded === null) {
