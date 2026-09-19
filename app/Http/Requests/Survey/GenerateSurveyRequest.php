@@ -135,12 +135,22 @@ class GenerateSurveyRequest extends FormRequest
     }
 
     /**
-     * Crée-t-on un questionnaire ? Faux = mode proposition (résultat conservé dans le job pour fusion).
-     * Toujours vrai lorsqu'un `survey_id` est fourni (le brouillon est alors mis à jour).
+     * Crée-t-on un questionnaire ? Faux = mode **proposition** : le résultat reste dans le job
+     * (`result.definition`) pour être comparé et fusionné côté web.
+     *
+     * E-03 — `create: false` fait désormais foi **même avec un `survey_id`**. Le contrat le prévoit
+     * (« Si fourni, la proposition est fusionnée côté web au lieu de créer un questionnaire ») et le
+     * builder en a besoin : il envoie `survey_id` pour l'autorisation (`generateAi` sur CE questionnaire)
+     * et `create: false` pour récupérer la proposition à passer au `DiffReview`. Sans `create`, un
+     * `survey_id` continue de mettre à jour le brouillon, comme avant.
      */
     public function shouldCreate(): bool
     {
-        return $this->surveyId() !== null || $this->boolean('create', true);
+        if ($this->has('create')) {
+            return $this->boolean('create');
+        }
+
+        return true;
     }
 
     public function title(): ?string

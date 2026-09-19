@@ -209,6 +209,40 @@ class SurveyGenerateTest extends TestCase
             ->assertJsonPath('data.result.definition.sections.0.key', 'entete');
     }
 
+    /**
+     * E-03 — le builder envoie `survey_id` (pour l'autorisation et le rattachement du job) **et**
+     * `create: false` : il veut une proposition à comparer dans `DiffReview`, pas un brouillon écrasé.
+     * Avant ce correctif, `survey_id` forçait la mise à jour du brouillon et le job ne renvoyait aucune
+     * définition — l'écran de génération du builder plantait sur `result.sections`.
+     */
+    public function test_survey_id_with_create_false_keeps_the_draft_untouched_and_returns_a_proposal(): void
+    {
+        $survey = app(SurveyVersionService::class)->createSurvey($this->project, $this->owner, 'Brouillon vierge');
+        $before = app(SurveyVersionService::class)->draftOf($survey);
+        $this->fakeGemini([$this->generatedJson()]);
+
+        $uuid = $this->actingAs($this->owner, 'sanctum')->postJson('/api/surveys/generate', [
+            'project_id' => $this->project->id,
+            'survey_id' => $survey->id,
+            'source_text' => $this->sourceText(),
+            'create' => false,
+        ])->assertStatus(202)->json('data.job_id');
+
+        $job = AiJob::query()->where('uuid', $uuid)->firstOrFail();
+        $this->assertSame(JobStatus::Done, $job->status, (string) $job->error);
+        $this->assertSame('jobs/'.$uuid.'/proposal', $job->result_ref);
+        $this->assertSame($survey->id, $job->survey_id, 'le job reste rattaché au questionnaire');
+        $this->assertSame(1, Survey::query()->count(), 'aucun questionnaire supplémentaire');
+
+        $after = app(SurveyVersionService::class)->draftOf($survey->fresh());
+        $this->assertSame($before->revision, $after->revision, 'le brouillon n\'est pas touché');
+        $this->assertSame($before->definition, $after->definition);
+
+        $this->actingAs($this->owner, 'sanctum')->getJson('/api/jobs/'.$uuid)
+            ->assertOk()
+            ->assertJsonPath('data.result.definition.sections.0.key', 'entete');
+    }
+
     public function test_generate_into_an_existing_survey_updates_its_draft(): void
     {
         $survey = app(SurveyVersionService::class)->createSurvey($this->project, $this->owner, 'Brouillon vierge');

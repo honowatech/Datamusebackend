@@ -23,11 +23,13 @@ use Throwable;
  * Payload : uuid de l'`AiJob`, clé API **chiffrée** (`ApiKeyResolver::encryptForJob`), fournisseur et
  * options. La clé n'est jamais écrite en clair, ni dans `ai_jobs.input`, ni dans la table `jobs`.
  *
- * Trois modes, selon les options :
+ * Trois modes, dans cet ordre de priorité :
+ *   - `create: false`     → **proposition** : la définition est conservée dans le job
+ *     (`result_ref = jobs/{uuid}/proposal`, `ai_jobs.output = {definition, warnings}`) pour la revue et la
+ *     fusion côté builder (W-08, `DiffReview`). C'est le mode du bouton « Générer par IA » du builder,
+ *     qui envoie aussi `survey_id` — pour l'autorisation et pour rattacher le job au questionnaire ;
  *   - `survey_id` fourni  → `saveDraft()` sur le brouillon de ce questionnaire (`result_ref = surveys/{id}`) ;
- *   - sinon `create` vrai → `createSurvey()` dans `project_id` (`result_ref = surveys/{id}`) ;
- *   - sinon (proposition) → la définition est conservée dans le job (`result_ref = jobs/{uuid}/proposal`,
- *     `ai_jobs.output = {definition, warnings}`) pour une fusion côté builder (W-08).
+ *   - sinon               → `createSurvey()` dans `project_id` (`result_ref = surveys/{id}`).
  */
 class GenerateFormJob implements ShouldQueue
 {
@@ -75,6 +77,14 @@ class GenerateFormJob implements ShouldQueue
                 $job,
             );
 
+            // `create: false` fait foi en premier (E-03) : le builder envoie `survey_id` pour
+            // l'autorisation mais veut une **proposition** à comparer, pas un brouillon écrasé.
+            if (($this->options['create'] ?? true) === false) {
+                $this->storeProposal($job, $ai, $definition);
+
+                return;
+            }
+
             $surveyId = $this->options['survey_id'] ?? null;
             if ($surveyId !== null) {
                 $this->updateExistingDraft($job, $versions, (int) $surveyId, $definition);
@@ -82,13 +92,7 @@ class GenerateFormJob implements ShouldQueue
                 return;
             }
 
-            if ($this->options['create'] ?? true) {
-                $this->createSurvey($job, $ai, $versions, $definition);
-
-                return;
-            }
-
-            $this->storeProposal($job, $ai, $definition);
+            $this->createSurvey($job, $ai, $versions, $definition);
         } catch (Throwable $e) {
             $this->markJobFailed($job, $e);
         }
