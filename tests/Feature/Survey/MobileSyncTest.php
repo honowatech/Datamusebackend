@@ -3,6 +3,7 @@
 namespace Tests\Feature\Survey;
 
 use App\Enums\MediaState;
+use App\Enums\SubmissionStatus;
 use App\Enums\SurveyStatus;
 use App\Enums\UserRole;
 use App\Enums\VersionStatus;
@@ -210,6 +211,50 @@ class MobileSyncTest extends TestCase
             ['total_valid', 'quartiers_distincts', 'par_reseau', 'par_quartier'],
             array_column($response->json('data.0.quotas'), 'key'),
         );
+    }
+
+    /**
+     * Régression M-13 : le manifest d'un enquêteur **ayant déjà des soumissions** répondait `500`
+     * (`Illegal offset type`) — `pluck('total', 'status')` sur une collection Eloquent dont `status`
+     * est casté en enum. Aucun cas de B-07 ne couvrait cette situation, pourtant celle de
+     * `enq1@test.local` après `SurveyDemoSeeder`.
+     */
+    public function test_manifest_counts_the_submissions_of_an_enumerator_with_several_statuses(): void
+    {
+        $statuses = [
+            SubmissionStatus::Submitted,
+            SubmissionStatus::Submitted,
+            SubmissionStatus::Validated,
+            SubmissionStatus::ScreenedOut,
+            SubmissionStatus::Rejected,
+        ];
+        foreach ($statuses as $status) {
+            Submission::factory()->create([
+                'survey_id' => $this->survey->id,
+                'survey_version_id' => $this->version->id,
+                'project_id' => $this->project->id,
+                'enumerator_id' => $this->enumerator->id,
+                'status' => $status,
+            ]);
+        }
+
+        // Les fiches d'un autre enquêteur ne sont jamais comptées.
+        Submission::factory()->create([
+            'survey_id' => $this->survey->id,
+            'survey_version_id' => $this->version->id,
+            'project_id' => $this->project->id,
+            'enumerator_id' => $this->stranger->id,
+            'status' => SubmissionStatus::Submitted,
+        ]);
+
+        $this->actingAs($this->enumerator, 'sanctum')
+            ->getJson('/api/mobile/forms')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.my_counts.completed', 3)   // submitted ×2 + validated
+            ->assertJsonPath('data.0.my_counts.screened_out', 1)
+            ->assertJsonPath('data.0.my_counts.rejected', 1)
+            ->assertJsonPath('data.0.my_counts.follow_ups_due', 0);
     }
 
     public function test_manifest_is_empty_for_an_unassigned_enumerator(): void

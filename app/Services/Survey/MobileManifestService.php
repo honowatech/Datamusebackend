@@ -52,11 +52,15 @@ class MobileManifestService
             ->get()
             ->keyBy('survey_id');
 
+        // `toBase()` : l'agrégat est lu en lignes **brutes** (stdClass). Sur une collection Eloquent,
+        // `Submission::$casts['status']` ferait de `status` un enum, et `pluck('total', 'status')`
+        // lèverait « Illegal offset type » dès que l'enquêteur a une soumission (bogue M-13).
         $counts = Submission::query()
             ->whereIn('survey_id', $surveyIds)
             ->where('enumerator_id', $user->id)
             ->selectRaw('survey_id, status, count(*) as total')
             ->groupBy('survey_id', 'status')
+            ->toBase()
             ->get()
             ->groupBy('survey_id');
 
