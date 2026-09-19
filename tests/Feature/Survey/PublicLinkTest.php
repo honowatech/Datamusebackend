@@ -281,6 +281,65 @@ class PublicLinkTest extends TestCase
         $this->assertSame(0, (int) $this->link->fresh()->responses_count);
     }
 
+    // ==== E-01 ====
+    /**
+     * Le canal public reçoit la définition filtrée : les questions `pii` retirées ne doivent pas
+     * être exigées à la validation. Sur MunaGo, `num_whatsapp` et `nom_compte_momo` sont `pii`,
+     * obligatoires et pertinentes dès `acompte_verse` : sans ce correctif, **toute** réponse
+     * publique décrivant un acompte était rejetée alors que le formulaire servi ne les demandait pas.
+     */
+    public function test_a_public_submission_is_not_rejected_for_pii_questions_removed_from_the_public_form(): void
+    {
+        Queue::fake();
+
+        $source = collect($this->fx->fixture['submissions'])
+            ->first(fn (array $s) => ($s['answers']['acompte_verse'] ?? null) === true);
+        $this->assertNotNull($source, 'La fixture doit contenir une fiche avec acompte.');
+
+        $answers = $source['answers'];
+        unset($answers['num_whatsapp'], $answers['nom_compte_momo']);
+        // `date_limite_retrait` est contraint à [aujourd'hui, J+10] par rapport à la date d'entretien.
+        $answers['date_limite_retrait'] = Carbon::parse('2026-09-16')->addDays(7)->toDateString();
+
+        $payload = $this->payload(['answers' => $answers]);
+
+        $result = $this->postJson('/api/public/surveys/'.$this->link->token.'/submissions', [
+            'submission' => $payload,
+            'website' => '',
+        ])->assertOk()->json('data');
+
+        $this->assertSame('accepted', $result['status'], 'Réponse rejetée : '.json_encode($result['errors'] ?? []));
+
+        $submission = Submission::query()->where('uuid', $payload['uuid'])->firstOrFail();
+        $this->assertSame(SubmissionChannel::Public, $submission->channel);
+        // Les réponses `pii` ne sont ni exigées ni stockées sur le canal public.
+        $this->assertArrayNotHasKey('num_whatsapp', $submission->answers ?? []);
+        $this->assertArrayNotHasKey('nom_compte_momo', $submission->answers ?? []);
+    }
+
+    /** Le canal mobile continue, lui, d'exiger les questions `pii` obligatoires. */
+    public function test_the_mobile_channel_still_requires_the_pii_questions(): void
+    {
+        $enumerator = $this->fx->enumerators[1];
+
+        $source = collect($this->fx->fixture['submissions'])
+            ->first(fn (array $s) => ($s['answers']['acompte_verse'] ?? null) === true);
+
+        $answers = $source['answers'];
+        unset($answers['num_whatsapp'], $answers['nom_compte_momo']);
+        $answers['date_limite_retrait'] = Carbon::parse('2026-09-16')->addDays(7)->toDateString();
+
+        $payload = $this->payload(['answers' => $answers, 'survey_id' => $this->fx->survey->id, 'form_version' => $this->fx->version->version]);
+
+        $result = $this->actingAs($enumerator)
+            ->postJson('/api/mobile/submissions', ['submissions' => [$payload]])
+            ->assertOk()->json('data.results.0');
+
+        $this->assertSame('rejected', $result['status']);
+        $this->assertArrayHasKey('num_whatsapp', $result['errors_by_key']);
+    }
+    // ==== /E-01 ====
+
     public function test_resending_the_same_uuid_answers_duplicate_without_counting_twice(): void
     {
         $payload = $this->payload();

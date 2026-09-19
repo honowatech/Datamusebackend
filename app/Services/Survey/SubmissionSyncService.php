@@ -176,7 +176,7 @@ class SubmissionSyncService
 
         // 5. Validation par le moteur DFS de la version indiquée.
         $settings = $version->settings();
-        $engine = $this->buildEngine($user, $version, $payload, $settings);
+        $engine = $this->buildEngine($user, $version, $payload, $settings, $channel);
         $errors = $engine->finalize();
         if ($errors !== []) {
             $this->rememberRejected($uuid);
@@ -267,8 +267,13 @@ class SubmissionSyncService
      * @param  array<string, mixed>  $payload
      * @param  array<string, mixed>  $settings
      */
-    private function buildEngine(?User $user, SurveyVersion $version, array $payload, array $settings): FormEngine
-    {
+    private function buildEngine(
+        ?User $user,
+        SurveyVersion $version,
+        array $payload,
+        array $settings,
+        SubmissionChannel $channel = SubmissionChannel::Mobile,
+    ): FormEngine {
         $startedAt = (string) ($payload['started_at'] ?? '');
         $endedAt = (string) ($payload['ended_at'] ?? '');
 
@@ -286,7 +291,19 @@ class SubmissionSyncService
             today: $startedAt !== '' ? substr($startedAt, 0, 10) : null,
         );
 
-        $engine = new FormEngine($version->definition ?? [], $ctx);
+        // ==== E-01 ====
+        // Le canal public reçoit la définition **filtrée** (`PublicDefinitionFilter` : questions
+        // `pii` / `enumerator_only` et notes enquêteur retirées). La valider contre la définition
+        // complète revenait à exiger des réponses jamais demandées : sur MunaGo, toute fiche
+        // publique avec acompte était rejetée (`num_whatsapp`, `nom_compte_momo` obligatoires).
+        // Le serveur valide donc exactement le formulaire qu'il a servi.
+        $definition = $version->definition ?? [];
+        if ($channel === SubmissionChannel::Public) {
+            $definition = (new PublicDefinitionFilter)->apply($definition);
+        }
+        // ==== /E-01 ====
+
+        $engine = new FormEngine($definition, $ctx);
         $answers = is_array($payload['answers'] ?? null) ? $payload['answers'] : [];
         $engine->setAnswers($answers);
 
