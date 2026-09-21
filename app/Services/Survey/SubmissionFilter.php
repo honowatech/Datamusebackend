@@ -14,8 +14,8 @@ use Throwable;
 
 /**
  * Filtres partagés par `GET /surveys/{id}/submissions` (B-10 liste) et
- * `GET /surveys/{id}/submissions/export` : `status`, `channel`, `enumerator_id`, `zone`, `version`,
- * `from`/`to` (sur `ended_at`), `flag`, `q`.
+ * `GET /surveys/{id}/submissions/export` : `status`, `channel`, `public_link_id` (F-B4),
+ * `enumerator_id`, `zone`, `version`, `from`/`to` (sur `ended_at`), `flag`, `q`.
  *
  * Aucune requête JSON-path (portabilité SQLite/MySQL) : le drapeau est cherché par `LIKE` sur la
  * colonne `flags` sérialisée, et `q` pré-filtre par `LIKE` puis compare réellement les valeurs en PHP,
@@ -48,6 +48,13 @@ class SubmissionFilter
         if (is_string($channel) && $channel !== '') {
             $query->where('channel', $channel);
         }
+
+        // ==== F-B4 ==== fiches issues d'un lien public précis (colonne F-B2).
+        $publicLinkId = (int) $request->query('public_link_id', 0);
+        if ($publicLinkId > 0) {
+            $query->where('public_link_id', $publicLinkId);
+        }
+        // ==== /F-B4 ====
 
         $enumeratorId = (int) $request->query('enumerator_id', 0);
         if ($enumeratorId > 0) {

@@ -52,6 +52,9 @@ class Submission extends Model
         'project_id',
         'enumerator_id',
         'device_id',
+        // ==== F-B2 ==== lien public d'origine (canal `public`), null ailleurs
+        'public_link_id',
+        // ==== /F-B2 ====
         'channel',
         'status',
         'fiche_code',
@@ -176,6 +179,12 @@ class Submission extends Model
     public function device(): BelongsTo
     {
         return $this->belongsTo(Device::class);
+    }
+
+    /** Lien public ayant reçu la fiche (F-B2) ; null hors canal `public` ou lien supprimé. */
+    public function publicLink(): BelongsTo
+    {
+        return $this->belongsTo(PublicLink::class, 'public_link_id');
     }
 
     public function reviewer(): BelongsTo

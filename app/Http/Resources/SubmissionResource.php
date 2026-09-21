@@ -56,6 +56,9 @@ class SubmissionResource extends JsonResource
                 ?? ($submission->reviewed_by !== null ? ['id' => (int) $submission->reviewed_by, 'name' => ''] : null),
             'reviewed_at' => $submission->reviewed_at?->toIso8601String(),
             'quality_notes' => $submission->quality_notes,
+            // ==== F-B2 ==== lien public d'origine, pour la pastille « En ligne — lien … »
+            'public_link_id' => $submission->public_link_id === null ? null : (int) $submission->public_link_id,
+            // ==== /F-B2 ====
         ];
     }
 

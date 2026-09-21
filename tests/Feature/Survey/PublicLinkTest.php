@@ -438,6 +438,48 @@ class PublicLinkTest extends TestCase
         ]);
     }
 
+    // ------------------------------------------------------------------ F-B2 : lien d'origine
+
+    public function test_a_public_submission_records_its_public_link(): void
+    {
+        $payload = $this->payload();
+
+        $result = $this->postJson('/api/public/surveys/'.$this->link->token.'/submissions', ['submission' => $payload])
+            ->assertOk()->json('data');
+        $this->assertSame('accepted', $result['status'], (string) json_encode($result['errors'] ?? []));
+
+        $submission = Submission::query()->where('uuid', $payload['uuid'])->firstOrFail();
+        $this->assertSame(SubmissionChannel::Public, $submission->channel);
+        $this->assertSame((int) $this->link->id, (int) $submission->public_link_id);
+
+        // Le résumé l'expose, et la liste sait filtrer dessus.
+        $row = $this->actingAs($this->supervisor)
+            ->getJson('/api/surveys/'.$this->fx->survey->id.'/submissions?public_link_id='.$this->link->id)
+            ->assertOk()->json('data');
+        $this->assertCount(1, $row);
+        $this->assertSame((int) $this->link->id, $row[0]['public_link_id']);
+
+        $other = PublicLink::factory()->create(['survey_id' => $this->fx->survey->id, 'created_by' => $this->analyst->id]);
+        $this->actingAs($this->supervisor)
+            ->getJson('/api/surveys/'.$this->fx->survey->id.'/submissions?public_link_id='.$other->id)
+            ->assertOk()
+            ->assertJsonPath('meta.pagination.total', 0);
+    }
+
+    public function test_deleting_a_public_link_keeps_the_submission_and_nulls_the_reference(): void
+    {
+        $payload = $this->payload();
+        $this->postJson('/api/public/surveys/'.$this->link->token.'/submissions', ['submission' => $payload])->assertOk();
+
+        $submission = Submission::query()->where('uuid', $payload['uuid'])->firstOrFail();
+        $this->assertNotNull($submission->public_link_id);
+
+        $this->link->delete();
+
+        $this->assertDatabaseHas('submissions', ['uuid' => $payload['uuid']]);
+        $this->assertNull($submission->fresh()->public_link_id);
+    }
+
     public function test_a_media_for_a_submission_of_another_link_is_refused(): void
     {
         $other = PublicLink::factory()->create(['survey_id' => $this->fx->survey->id, 'created_by' => $this->analyst->id]);

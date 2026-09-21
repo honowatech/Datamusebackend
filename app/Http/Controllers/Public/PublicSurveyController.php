@@ -125,9 +125,14 @@ class PublicSurveyController extends ApiController
 
         $result = $this->sync->sync(null, $payload, SubmissionChannel::Public);
 
+        if ($result->serverId !== null) {
+            // F-B2 : le lien d'origine est désormais persisté (`submissions.public_link_id`), y
+            // compris sur un renvoi `updated` — le cache ne portait l'information que 24 h.
+            Submission::query()->whereKey($result->serverId)->update(['public_link_id' => $link->id]);
+            Cache::put(self::LINK_CACHE_PREFIX.$result->uuid, $link->id, now()->addHours(self::MEDIA_WINDOW_HOURS));
+        }
         if ($result->status === SubmissionSyncResult::ACCEPTED && $result->serverId !== null) {
             DB::table('public_links')->where('id', $link->id)->increment('responses_count');
-            Cache::put(self::LINK_CACHE_PREFIX.$result->uuid, $link->id, now()->addHours(self::MEDIA_WINDOW_HOURS));
         }
 
         return $this->ok(new SubmissionSyncResultResource($result));
@@ -146,7 +151,7 @@ class PublicSurveyController extends ApiController
         if ($submission === null
             || $submission->survey_id !== $link->survey_id
             || $submission->channel !== SubmissionChannel::Public
-            || (int) Cache::get(self::LINK_CACHE_PREFIX.strtolower($uuid), 0) !== (int) $link->id) {
+            || ! $this->belongsToLink($submission, $link)) {
             return $this->fail('Soumission introuvable pour ce lien.', 404);
         }
 
@@ -158,6 +163,19 @@ class PublicSurveyController extends ApiController
     }
 
     // ------------------------------------------------------------------ helpers
+
+    /**
+     * La fiche vient-elle de ce lien ? F-B2 : la colonne `public_link_id` fait foi ; le cache reste
+     * consulté pour les fiches reçues avant la migration, dont la colonne est nulle.
+     */
+    private function belongsToLink(Submission $submission, PublicLink $link): bool
+    {
+        if ($submission->public_link_id !== null) {
+            return (int) $submission->public_link_id === (int) $link->id;
+        }
+
+        return (int) Cache::get(self::LINK_CACHE_PREFIX.strtolower((string) $submission->uuid), 0) === (int) $link->id;
+    }
 
     /**
      * Lien ouvert, ou la réponse d'erreur à renvoyer (`404` inconnu, `410 {reason}` fermé).
