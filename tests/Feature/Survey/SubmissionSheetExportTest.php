@@ -249,6 +249,44 @@ class SubmissionSheetExportTest extends TestCase
     }
 
     /**
+     * F-E1 : en requête **cross-origin**, `HandleCors` réécrit `Access-Control-Expose-Headers` à partir
+     * de `config('cors.exposed_headers')` et écrase donc l'en-tête posé par le contrôleur. Sans
+     * `Content-Disposition` dans la configuration, le navigateur ne peut pas lire le nom du fichier.
+     */
+    public function test_content_disposition_stays_exposed_on_a_cross_origin_request(): void
+    {
+        $submission = $this->submission(self::WITH_DEPOSIT);
+        $origin = (string) config('cors.allowed_origins')[0];
+
+        foreach (['layout=long', 'layout=wide'] as $query) {
+            $response = $this->actingAs($this->analyst)->get($this->url($submission, $query), ['Origin' => $origin]);
+
+            $response->assertOk();
+            $this->assertStringContainsString(
+                'Content-Disposition',
+                (string) $response->headers->get('Access-Control-Expose-Headers'),
+                "le nom du fichier reste lisible par le navigateur ($query)",
+            );
+            $this->assertStringContainsString('.csv', (string) $response->headers->get('Content-Disposition'));
+        }
+    }
+
+    /** L'export de TOUTE l'enquête voyage par le même en-tête : il profite de la même correction. */
+    public function test_the_survey_export_also_exposes_content_disposition_cross_origin(): void
+    {
+        $origin = (string) config('cors.allowed_origins')[0];
+
+        $response = $this->actingAs($this->analyst)
+            ->get('/api/surveys/'.$this->fx->survey->id.'/submissions/export?format=csv', ['Origin' => $origin]);
+
+        $response->assertOk();
+        $this->assertStringContainsString(
+            'Content-Disposition',
+            (string) $response->headers->get('Access-Control-Expose-Headers'),
+        );
+    }
+
+    /**
      * Lignes de données d'un export `long` (après le bloc d'en-tête et la ligne vide).
      *
      * @return list<list<string>>

@@ -35,7 +35,9 @@ return [
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => ['ETag', 'X-Server-Time', 'Retry-After', 'Location'],
+    // `HandleCors` écrase l'en-tête posé par un contrôleur : `Content-Disposition` doit figurer ici,
+    // sinon le navigateur ne peut pas lire le nom des fichiers exportés (F-E1, exports CSV/XLSX).
+    'exposed_headers' => ['ETag', 'X-Server-Time', 'Retry-After', 'Location', 'Content-Disposition'],
 
     'max_age' => 600,
 
