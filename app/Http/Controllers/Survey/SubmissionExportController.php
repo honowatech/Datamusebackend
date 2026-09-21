@@ -8,6 +8,7 @@ use App\Models\Survey;
 use App\Services\Survey\ReponsesLayout;
 use App\Services\Survey\SubmissionFilter;
 use App\Services\Survey\SurveyMaterializationService;
+use App\Support\CsvWriter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -116,14 +117,14 @@ class SubmissionExportController extends ApiController
      */
     private function streamCsv(string $filename, array $columns, \Generator $rows): StreamedResponse
     {
+        // F-B5 : l'écriture (BOM, séparateur, garde anti-injection) vit dans `App\Support\CsvWriter`,
+        // partagée avec l'export d'UNE fiche.
         return response()->streamDownload(function () use ($columns, $rows): void {
             $handle = fopen('php://output', 'w');
-            // BOM UTF-8 : Excel (Windows) reconnaît alors les accents sans import manuel.
-            fwrite($handle, "\u{FEFF}");
-            fputcsv($handle, $columns, ',', '"', '\\');
-            foreach ($rows as $row) {
-                fputcsv($handle, array_map(self::scalar(...), array_values($row)), ',', '"', '\\');
-            }
+            CsvWriter::write($handle, (function () use ($columns, $rows) {
+                yield $columns;
+                yield from $rows;
+            })());
             fclose($handle);
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',

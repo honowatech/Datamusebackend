@@ -22,6 +22,7 @@ use App\Http\Controllers\Survey\ReportController;
 use App\Http\Controllers\Survey\StatsController;
 use App\Http\Controllers\Survey\SubmissionController;
 use App\Http\Controllers\Survey\SubmissionExportController;
+use App\Http\Controllers\Survey\SubmissionSheetExportController;
 use App\Http\Controllers\Survey\SupervisionController;
 use App\Http\Controllers\Survey\SurveyController;
 use App\Http\Controllers\Survey\SurveyGenerateController;
@@ -136,6 +137,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // ==== F-B ==== Fiche de réponse : consultation structurée et export CSV d'UNE soumission.
     Route::get('/submissions/{submission}/sheet', [SubmissionController::class, 'sheet'])
         ->whereNumber('submission')->name('submissions.sheet');
+    Route::get('/submissions/{submission}/export', SubmissionSheetExportController::class)
+        ->whereNumber('submission')->name('submissions.sheet.export');
     // ==== /F-B ====
 
     Route::get('/surveys/{survey}/stats/overview', [StatsController::class, 'overview'])->whereNumber('survey')->name('surveys.stats.overview');
