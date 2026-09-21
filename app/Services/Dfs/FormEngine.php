@@ -455,6 +455,45 @@ final class FormEngine
         return $keys;
     }
 
+    // ==== F-B3 ==== lecture des groupes répétés (la fiche de réponse rend chaque instance)
+
+    /**
+     * Instances d'un groupe répété, telles que stockées (index 0-based).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function instancesOf(string $group): array
+    {
+        return $this->instances($group);
+    }
+
+    /**
+     * Pertinence d'un enfant **dans une instance** de groupe répété (index 0-based).
+     *
+     * `isRelevant()` / `isVisible()` ne savent rien des enfants répétés : leur pertinence est locale à
+     * l'instance et vit dans l'état interne du groupe.
+     */
+    public function instanceRelevant(string $group, int $index, string $key): bool
+    {
+        return ($this->relevance[$group] ?? false)
+            && (bool) ($this->repeat[$group][$index]['relevance'][$key] ?? false);
+    }
+
+    /**
+     * Valeur d'un enfant d'instance : résultat du `calculate` s'il en est un, sinon la réponse saisie.
+     */
+    public function instanceValue(string $group, int $index, string $key): mixed
+    {
+        $node = $this->catalog->node($key);
+        if (($node['type'] ?? null) === 'calculate') {
+            return $this->repeat[$group][$index]['calculated'][$key] ?? null;
+        }
+
+        return $this->instances($group)[$index][$key] ?? null;
+    }
+
+    // ==== /F-B3 ====
+
     /**
      * Sections visibles du formulaire de base, dans l'ordre (pertinentes, jusqu'à la section du stop
      * déclenché incluse).
