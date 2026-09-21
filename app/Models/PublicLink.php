@@ -10,7 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
- * Lien public de collecte web anonyme (/s/{token}).
+ * Lien public de collecte web anonyme (/s/{token}). `is_default` marque le lien web du questionnaire
+ * (onglet « Lien Web », `WebLinkService`) : un seul à la fois.
  */
 class PublicLink extends Model
 {
@@ -25,12 +26,14 @@ class PublicLink extends Model
         'max_responses',
         'responses_count',
         'is_active',
+        'is_default',
         'created_by',
     ];
 
     protected $attributes = [
         'responses_count' => 0,
         'is_active' => true,
+        'is_default' => false,
     ];
 
     protected function casts(): array
@@ -40,6 +43,7 @@ class PublicLink extends Model
             'max_responses' => 'integer',
             'responses_count' => 'integer',
             'is_active' => 'boolean',
+            'is_default' => 'boolean',
         ];
     }
 

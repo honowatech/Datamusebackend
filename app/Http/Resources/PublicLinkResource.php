@@ -31,6 +31,7 @@ class PublicLinkResource extends JsonResource
             'max_responses' => $link->max_responses,
             'responses_count' => (int) $link->responses_count,
             'is_active' => (bool) $link->is_active,
+            'is_default' => (bool) $link->is_default,
             'state' => self::state($link),
             'remaining' => self::remaining($link),
             'created_by' => UserResource::ref($link->relationLoaded('creator') ? $link->creator : null),

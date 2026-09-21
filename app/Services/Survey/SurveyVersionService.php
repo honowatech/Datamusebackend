@@ -58,6 +58,7 @@ class SurveyVersionService
     public function __construct(
         private readonly DfsValidator $validator,
         private readonly MembershipService $membership,
+        private readonly WebLinkService $webLinks,
     ) {}
 
     // ------------------------------------------------------------------ création
@@ -96,6 +97,7 @@ class SurveyVersionService
             ]);
 
             $survey->forceFill(['current_version_id' => $version->id])->save();
+            $this->webLinks->ensure($survey, $user);
 
             return $survey;
         });
@@ -377,6 +379,7 @@ class SurveyVersionService
             ]);
 
             $copy->forceFill(['current_version_id' => $version->id])->save();
+            $this->webLinks->ensure($copy, $user);
 
             return $copy;
         });

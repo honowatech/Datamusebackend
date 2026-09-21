@@ -18,6 +18,7 @@ use App\Http\Controllers\Survey\InvitationController;
 use App\Http\Controllers\Survey\ProjectController;
 use App\Http\Controllers\Survey\ProjectMemberController;
 use App\Http\Controllers\Survey\PublicLinkController;
+use App\Http\Controllers\Survey\WebLinkController;
 use App\Http\Controllers\Survey\ReportController;
 use App\Http\Controllers\Survey\StatsController;
 use App\Http\Controllers\Survey\SubmissionController;
@@ -184,6 +185,10 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/surveys/{survey}/public-links', [PublicLinkController::class, 'index'])->whereNumber('survey')->name('surveys.public-links.index');
     Route::post('/surveys/{survey}/public-links', [PublicLinkController::class, 'store'])->whereNumber('survey')->name('surveys.public-links.store');
     Route::delete('/surveys/{survey}/public-links/{linkId}', [PublicLinkController::class, 'destroy'])->whereNumber(['survey', 'linkId'])->name('surveys.public-links.destroy');
+
+    // Lien web par défaut d'un questionnaire (onglet « Lien Web »)
+    Route::get('/surveys/{survey}/web-link', [WebLinkController::class, 'show'])->whereNumber('survey')->name('surveys.web-link.show');
+    Route::post('/surveys/{survey}/web-link/regenerate', [WebLinkController::class, 'regenerate'])->whereNumber('survey')->name('surveys.web-link.regenerate');
 });
 
 // ==== B-07 ==== Synchronisation mobile : 600/min/utilisateur, meta.server_time + X-Server-Time sur chaque réponse

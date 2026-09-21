@@ -389,15 +389,19 @@ class SurveyDemoSeeder extends Seeder
 
     private function publicLink(Survey $survey, User $analyst): void
     {
-        PublicLink::query()->updateOrCreate(
-            ['token' => self::PUBLIC_LINK_TOKEN],
-            [
-                'survey_id' => $survey->id,
-                'label' => 'Lien de démonstration',
-                'is_active' => true,
-                'created_by' => $analyst->id,
-            ],
-        );
+        // Le lien de démonstration est le lien web par défaut du questionnaire (créé avec lui).
+        $link = PublicLink::query()->where('token', self::PUBLIC_LINK_TOKEN)->first()
+            ?? $survey->publicLinks()->where('is_default', true)->first()
+            ?? new PublicLink;
+
+        $link->fill([
+            'survey_id' => $survey->id,
+            'token' => self::PUBLIC_LINK_TOKEN,
+            'label' => 'Lien de démonstration',
+            'is_active' => true,
+            'is_default' => true,
+            'created_by' => $analyst->id,
+        ])->save();
     }
 
     // ------------------------------------------------------------------ helpers
