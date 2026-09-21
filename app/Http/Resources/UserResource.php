@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Schéma OpenAPI `User` : {id, name, email, role, phone, locale, created_at}.
+ * Schéma OpenAPI `User` : {id, name, email, role, phone, locale, avatar_updated_at, created_at}.
  *
  * @mixin User
  */
@@ -23,6 +23,8 @@ class UserResource extends JsonResource
             'role' => $this->role instanceof UserRole ? $this->role->value : (string) ($this->role ?? UserRole::Analyste->value),
             'phone' => $this->phone,
             'locale' => $this->locale ?? 'fr',
+            // Présence et version de la photo (`GET /profile/avatar`) ; `null` = pas de photo.
+            'avatar_updated_at' => $this->avatar_updated_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

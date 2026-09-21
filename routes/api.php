@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BusinessMetricController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\DatabaseConnectionController;
@@ -46,6 +47,14 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
         return $request->user();
     });
     Route::post('/user/settings', [AuthController::class, 'updateSettings']);
+
+    // Profil de l'utilisateur connecté (page « Profil »)
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->middleware('throttle:6,1')->name('profile.password');
+    Route::get('/profile/avatar', [ProfileController::class, 'showAvatar'])->name('profile.avatar.show');
+    Route::post('/profile/avatar', [ProfileController::class, 'storeAvatar'])->name('profile.avatar.store');
+    Route::delete('/profile/avatar', [ProfileController::class, 'destroyAvatar'])->name('profile.avatar.destroy');
 
     // DB connections management
     Route::post('/target-db/connect', [DatabaseConnectionController::class, 'connect']);

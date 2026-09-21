@@ -41,6 +41,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'avatar_path',
         'gemini_api_key',
         'deepseek_api_key',
     ];
@@ -71,6 +72,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'avatar_updated_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
             'gemini_api_key' => 'encrypted',
