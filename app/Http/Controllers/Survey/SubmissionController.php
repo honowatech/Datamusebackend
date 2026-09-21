@@ -17,6 +17,7 @@ use App\Services\Dfs\LabelResolver;
 use App\Services\Dfs\QuestionCatalog;
 use App\Services\Survey\SubmissionFilter;
 use App\Services\Survey\SubmissionQualityService;
+use App\Services\Survey\SubmissionSheetBuilder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,6 +32,8 @@ use Throwable;
  *   voit tout le questionnaire ; un enquêteur affecté ne voit que **ses** fiches.
  * - `GET /submissions/{id}` — détail (`SubmissionDetail`) : réponses, libellés, médias avec URL signée
  *   15 min, entrées de suivi, codages de verbatims, explication des drapeaux, appareil.
+ * - `GET /submissions/{id}/sheet` — fiche lisible (`SubmissionSheet`, F-B4) : sections et questions dans
+ *   l'ordre de LA version de la fiche, `asked` / `display` calculés par `SubmissionSheetBuilder`.
  * - `PATCH /submissions/{id}` — revue qualité (`status`, `quality_notes`, `reviewed_by/at`). Idempotent.
  * - `DELETE /submissions/{id}` — suppression définitive ; l'uuid passe par `DeletedSubmission::remember()`
  *   pour que le mobile reçoive `duplicate` s'il le renvoie, et les fichiers médias sont effacés.
@@ -100,6 +103,35 @@ class SubmissionController extends ApiController
 
         return $this->ok($data);
     }
+
+    // ==== F-B4 ====
+
+    /**
+     * `GET /submissions/{id}/sheet` — fiche de réponse (schéma `SubmissionSheet`).
+     *
+     * Mêmes droits que le détail (`SubmissionPolicy::view`). Les réponses `pii` ne sont montrées
+     * qu'à un analyste du projet (policy `exportSubmissions`, plan § 2 décision 4) ; la navigation
+     * précédent / suivant est bornée aux fiches que le lecteur a le droit de voir.
+     */
+    public function sheet(Request $request, Submission $submission, SubmissionSheetBuilder $builder): JsonResponse
+    {
+        Gate::authorize('view', $submission);
+
+        $user = $request->user();
+        $survey = $submission->survey ?? Survey::query()->find($submission->survey_id);
+        $supervisor = $survey !== null && $user->can('viewSubmissions', $survey);
+
+        $lang = $request->query('lang');
+
+        return $this->ok($builder->build(
+            $submission,
+            is_string($lang) && $lang !== '' ? $lang : null,
+            $survey !== null && $user->can('exportSubmissions', $survey),
+            $supervisor ? null : $user->id,
+        ));
+    }
+
+    // ==== /F-B4 ====
 
     public function update(ReviewSubmissionRequest $request, Submission $submission): JsonResponse
     {

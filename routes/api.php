@@ -133,6 +133,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::patch('/submissions/{submission}', [SubmissionController::class, 'update'])->whereNumber('submission')->name('submissions.update');
     Route::delete('/submissions/{submission}', [SubmissionController::class, 'destroy'])->whereNumber('submission')->name('submissions.destroy');
 
+    // ==== F-B ==== Fiche de réponse : consultation structurée et export CSV d'UNE soumission.
+    Route::get('/submissions/{submission}/sheet', [SubmissionController::class, 'sheet'])
+        ->whereNumber('submission')->name('submissions.sheet');
+    // ==== /F-B ====
+
     Route::get('/surveys/{survey}/stats/overview', [StatsController::class, 'overview'])->whereNumber('survey')->name('surveys.stats.overview');
     Route::get('/surveys/{survey}/stats/questions', [StatsController::class, 'questions'])->whereNumber('survey')->name('surveys.stats.questions');
     Route::get('/surveys/{survey}/stats/timeline', [StatsController::class, 'timeline'])->whereNumber('survey')->name('surveys.stats.timeline');
