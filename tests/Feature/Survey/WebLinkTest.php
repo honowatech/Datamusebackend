@@ -72,7 +72,7 @@ class WebLinkTest extends TestCase
 
         $this->assertTrue($first['is_default']);
         $this->assertSame('open', $first['state']);
-        $this->assertStringEndsWith('/s/'.$first['token'], $first['url']);
+        $this->assertStringEndsWith('/s?token='.$first['token'], $first['url']);
         $this->assertSame($first['id'], $again['id']);
         $this->assertSame(1, PublicLink::query()->where('survey_id', $this->fx->survey->id)->count());
 

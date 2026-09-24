@@ -107,7 +107,7 @@ class PublicLinkTest extends TestCase
         $this->assertSame(50, $created['remaining']);
         $this->assertSame('open', $created['state']);
         $this->assertSame(40, strlen($created['token']));
-        $this->assertStringEndsWith('/s/'.$created['token'], $created['url']);
+        $this->assertStringEndsWith('/s?token='.$created['token'], $created['url']);
         $this->assertSame($this->analyst->id, $created['created_by']['id']);
 
         $list = $this->actingAs($this->supervisor)

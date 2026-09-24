@@ -41,7 +41,9 @@ class PublicLinkResource extends JsonResource
 
     public static function url(PublicLink $link): string
     {
-        return rtrim((string) config('app.frontend_url'), '/').'/s/'.$link->token;
+        // Le front est livré en site statique : pas de segment dynamique, le jeton passe par
+        // la chaîne de requête (`frontend/src/lib/routes.ts`).
+        return rtrim((string) config('app.frontend_url'), '/').'/s?token='.$link->token;
     }
 
     /** `open` · `inactive` · `expired` · `full` — l'ordre reflète la raison renvoyée dans un `410`. */
