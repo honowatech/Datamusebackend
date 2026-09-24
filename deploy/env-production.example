@@ -1,0 +1,36 @@
+# Datamuse — configuration de production (API)
+# A deposer sous le nom « .env » a la racine de l'application, via le
+# gestionnaire de fichiers cPanel. Ce fichier n'est jamais versionne.
+
+APP_NAME=Datamuse
+APP_ENV=production
+APP_KEY=base64:T32cm7KMR6hSdMTZFbFrgptupZqtr4zsXIKqzOP/sM8=
+APP_DEBUG=false
+APP_URL=https://apidm.honowa.com
+FRONTEND_URL=https://datamuse.honowa.com
+
+LOG_CHANNEL=daily
+LOG_LEVEL=warning
+
+DB_CONNECTION=mysql
+DB_HOST=localhost
+DB_PORT=3306
+DB_DATABASE=REMPLACER_nom_de_la_base
+DB_USERNAME=REMPLACER_utilisateur
+DB_PASSWORD=REMPLACER_mot_de_passe
+
+SESSION_DRIVER=database
+CACHE_STORE=database
+QUEUE_CONNECTION=database
+FILESYSTEM_DISK=local
+
+# Cles IA : sans elles, generation, traduction et rapports echouent.
+GEMINI_API_KEY=REMPLACER
+DEEPSEEK_API_KEY=REMPLACER
+GEMINI_MODEL=gemini-1.5-flash
+DEEPSEEK_MODEL=deepseek-chat
+
+# Medias de collecte : disque prive, servis par URL signee uniquement.
+SURVEY_MEDIA_DISK=local
+SURVEY_MEDIA_MAX_MB=25
+SURVEY_EXPORT_MAX_ROWS=50000

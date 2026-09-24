@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 /**
- * Lien public de collecte web anonyme (/s/{token}). `is_default` marque le lien web du questionnaire
+ * Lien public de collecte web anonyme (/s?token={jeton}). `is_default` marque le lien web du questionnaire
  * (onglet « Lien Web », `WebLinkService`) : un seul à la fois.
  */
 class PublicLink extends Model

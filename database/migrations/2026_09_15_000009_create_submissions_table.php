@@ -23,8 +23,8 @@ return new class extends Migration
             $table->string('fiche_code', 64)->nullable();
             $table->string('zone', 100)->nullable();
             $table->string('language', 10)->default('fr');
-            $table->timestamp('started_at');
-            $table->timestamp('ended_at');
+            $table->dateTime('started_at');
+            $table->dateTime('ended_at');
             $table->unsignedInteger('duration_seconds')->nullable();
             $table->decimal('geo_lat', 10, 7)->nullable();
             $table->decimal('geo_lng', 10, 7)->nullable();

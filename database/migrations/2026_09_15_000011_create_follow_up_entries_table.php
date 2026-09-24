@@ -14,8 +14,8 @@ return new class extends Migration
             $table->foreignId('survey_id')->constrained()->cascadeOnDelete();
             $table->string('stage_key', 40);
             $table->foreignId('enumerator_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamp('due_at');
-            $table->timestamp('window_ends_at');
+            $table->dateTime('due_at');
+            $table->dateTime('window_ends_at');
             // pending | done | missed | skipped (App\Enums\FollowUpStatus)
             $table->string('status', 20)->default('pending');
             $table->json('answers')->nullable();
