@@ -1,0 +1,3643 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamuse.local/schemas/dfs-v1.schema.json",
+  "title": "Datamuse Form Schema v1",
+  "description": "Définition d'un questionnaire Datamuse (DFS v1). Spécification normative : docs/dfs/README.md.",
+  "type": "object",
+  "properties": {
+    "dfs_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Version du format DFS."
+    },
+    "id": {
+      "type": "string",
+      "description": "Identifiant stable du questionnaire (UUID), conservé entre versions.",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "version": {
+      "type": "integer",
+      "description": "Numéro de version publiée (1, 2, …).",
+      "minimum": 1
+    },
+    "title": {
+      "$ref": "#/$defs/I18n",
+      "description": "Titre du questionnaire."
+    },
+    "description": {
+      "$ref": "#/$defs/I18n",
+      "description": "Description / objectif."
+    },
+    "settings": {
+      "$ref": "#/$defs/Settings",
+      "description": "Paramètres."
+    },
+    "choice_lists": {
+      "type": "object",
+      "description": "Listes de choix partagées, par nom.",
+      "patternProperties": {
+        "^[A-Za-z][A-Za-z0-9_]{0,39}$": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Choice"
+          },
+          "minItems": 1,
+          "description": "Choix de la liste."
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "sections": {
+      "type": "array",
+      "description": "Sections dans l'ordre d'administration.",
+      "items": {
+        "$ref": "#/$defs/Section"
+      },
+      "minItems": 1
+    },
+    "follow_up_stages": {
+      "type": "array",
+      "description": "Étapes de suivi longitudinal (vide si aucune).",
+      "items": {
+        "$ref": "#/$defs/Stage"
+      },
+      "default": []
+    }
+  },
+  "required": [
+    "dfs_version",
+    "id",
+    "version",
+    "title",
+    "settings",
+    "choice_lists",
+    "sections",
+    "follow_up_stages"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "Key": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,39}$",
+      "description": "Identifiant stable (question, groupe, section, étape) : lettre puis lettres/chiffres/underscore, 40 caractères max, unique dans tout le formulaire.",
+      "examples": [
+        "D2",
+        "prix_rupture",
+        "F2"
+      ]
+    },
+    "ChoiceName": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_]{0,59}$",
+      "description": "Code d'un choix : alphanumérique et underscore, 60 caractères max, unique dans sa liste.",
+      "examples": [
+        "oui",
+        "autre",
+        "PK14"
+      ]
+    },
+    "LanguageCode": {
+      "type": "string",
+      "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
+      "description": "Code de langue BCP-47 court (`fr`, `en`, `fr-CM`).",
+      "examples": [
+        "fr",
+        "en"
+      ]
+    },
+    "I18n": {
+      "type": "object",
+      "description": "Texte multilingue : une clé par langue. La clé `settings.default_language` doit être présente (règle sémantique). Les libellés acceptent l'interpolation `${cle}`.",
+      "patternProperties": {
+        "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$": {
+          "type": "string",
+          "description": "Texte dans la langue donnée."
+        }
+      },
+      "additionalProperties": false,
+      "minProperties": 1,
+      "examples": [
+        {
+          "fr": "Avez-vous déjà été contacté au sujet du projet MunaGo ?",
+          "en": "Have you already been contacted about the MunaGo project?"
+        }
+      ]
+    },
+    "ExprScalar": {
+      "description": "Littéral chaîne, nombre, booléen ou null.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "Expr": {
+      "description": "Expression Logic (AST JsonLogic restreint) : littéral scalaire, liste littérale d'expressions, ou objet à une seule clé = opérateur dont la valeur est le tableau des arguments (`var` prend une chaîne).",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ExprScalar"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Expr"
+          },
+          "description": "Liste littérale ; chaque élément est évalué."
+        },
+        {
+          "$ref": "#/$defs/ExprOp"
+        }
+      ],
+      "examples": [
+        {
+          "==": [
+            {
+              "var": "D2"
+            },
+            "oui"
+          ]
+        },
+        {
+          "and": [
+            {
+              "selected": [
+                {
+                  "var": "F2"
+                },
+                "aucune"
+              ]
+            },
+            {
+              "!": [
+                {
+                  "answered": [
+                    {
+                      "var": "F2_other"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "if": [
+            {
+              ">": [
+                {
+                  "var": "prix"
+                },
+                20000
+              ]
+            },
+            "cher",
+            "ok"
+          ]
+        },
+        {
+          "concat": [
+            {
+              "var": "ville"
+            },
+            "-",
+            {
+              "var": "_seq"
+            }
+          ]
+        }
+      ]
+    },
+    "ExprOp": {
+      "description": "Nœud opérateur : exactement une clé parmi les opérateurs autorisés.",
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "Lecture d'une réponse ou d'une variable système. Chemin `KEY`, `_var_systeme` ou `KEY.champ` (objets géopoint/média ; `G.0.enfant` pour un groupe répété, index base 0). Clé inconnue ou question non pertinente → null.",
+          "properties": {
+            "var": {
+              "type": "string",
+              "pattern": "^_?[A-Za-z][A-Za-z0-9_]{0,39}(\\.[A-Za-z0-9_]+)*$",
+              "description": "Clé de question, variable système (préfixe `_`) ou chemin pointé."
+            }
+          },
+          "required": [
+            "var"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Égalité avec coercition (README § Logic) : `null == \"\"` vrai, nombre == chaîne numérique, liste vs scalaire faux. Résultat booléen.",
+          "properties": {
+            "==": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "=="
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Négation de `==`. Résultat booléen.",
+          "properties": {
+            "!=": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "!="
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Comparaison d'ordre strictement numérique ; tout opérande null ou non numérique → false.",
+          "properties": {
+            "<": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "<"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Comparaison d'ordre strictement numérique ; tout opérande null ou non numérique → false.",
+          "properties": {
+            "<=": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "<="
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Comparaison d'ordre strictement numérique ; tout opérande null ou non numérique → false.",
+          "properties": {
+            ">": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            ">"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Comparaison d'ordre strictement numérique ; tout opérande null ou non numérique → false.",
+          "properties": {
+            ">=": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            ">="
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "ET logique en court-circuit sur la valeur de vérité des arguments. Résultat booléen strict.",
+          "properties": {
+            "and": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "and"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "OU logique en court-circuit sur la valeur de vérité des arguments. Résultat booléen strict.",
+          "properties": {
+            "or": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "or"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Négation de la valeur de vérité. Résultat booléen.",
+          "properties": {
+            "!": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 1,
+              "maxItems": 1
+            }
+          },
+          "required": [
+            "!"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Conditionnelle : `[cond, alors, sinon]` ; forme chaînée `[c1, v1, c2, v2, …, sinon]`. Sans `sinon` → null.",
+          "properties": {
+            "if": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 2
+            }
+          },
+          "required": [
+            "if"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "`[aiguille, botte]` : appartenance à une liste (via `==`) ou sous-chaîne si la botte est une chaîne. Botte null → false.",
+          "properties": {
+            "in": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "in"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "`[reponse, nom_choix]` : vrai si le choix est sélectionné (select_multiple/rank : liste ; select_one : égalité). Réponse null → false.",
+          "properties": {
+            "selected": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "selected"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Nombre de choix sélectionnés : longueur de la liste, 1 pour une chaîne non vide, 0 sinon.",
+          "properties": {
+            "count_selected": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 1,
+              "maxItems": 1
+            }
+          },
+          "required": [
+            "count_selected"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Vrai si la valeur n'est pas vide (null, \"\", [], {} sont vides ; 0 est une réponse).",
+          "properties": {
+            "answered": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 1,
+              "maxItems": 1
+            }
+          },
+          "required": [
+            "answered"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Négation de `answered`.",
+          "properties": {
+            "empty": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 1,
+              "maxItems": 1
+            }
+          },
+          "required": [
+            "empty"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Premier argument qui n'est ni null ni \"\" ; sinon null.",
+          "properties": {
+            "coalesce": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "coalesce"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Concaténation en chaîne : null → \"\", nombres en notation JSON, booléens `true`/`false`, listes jointes par `,`.",
+          "properties": {
+            "concat": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "concat"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Addition numérique (1 argument = conversion en nombre). Chaînes numériques coercées ; tout argument null/non numérique → null.",
+          "properties": {
+            "+": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "+"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Soustraction (2 arguments) ou négation (1 argument). Argument null/non numérique → null.",
+          "properties": {
+            "-": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 1,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "-"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Multiplication numérique. Argument null/non numérique → null.",
+          "properties": {
+            "*": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 2
+            }
+          },
+          "required": [
+            "*"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Division réelle. Diviseur 0, argument null/non numérique → null.",
+          "properties": {
+            "/": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "/"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Reste de la division tronquée (signe du dividende, comme JS/PHP). Diviseur 0 → null.",
+          "properties": {
+            "%": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "%"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "`[valeur, motif]` : vrai si le motif (syntaxe ECMAScript, recherche partielle) est trouvé dans la valeur convertie en chaîne. Valeur null → false. Motif littéral obligatoire.",
+          "properties": {
+            "regex": {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "$ref": "#/$defs/Expr"
+                },
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Motif d'expression régulière (littéral)."
+                }
+              ],
+              "items": false,
+              "minItems": 2,
+              "maxItems": 2,
+              "description": "Arguments `[valeur, motif]`."
+            }
+          },
+          "required": [
+            "regex"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Longueur : chaîne (points de code Unicode) ou liste ; null → 0 ; autre → null.",
+          "properties": {
+            "length": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 1,
+              "maxItems": 1
+            }
+          },
+          "required": [
+            "length"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Date locale du jour au format `YYYY-MM-DD`. Aucun argument.",
+          "properties": {
+            "today": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 0,
+              "maxItems": 0
+            }
+          },
+          "required": [
+            "today"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "Date-heure locale courante ISO-8601 avec décalage (ex. `2026-09-15T10:04:00+01:00`). Aucun argument.",
+          "properties": {
+            "now": {
+              "type": "array",
+              "description": "Arguments de l'opérateur, chacun étant une expression.",
+              "items": {
+                "$ref": "#/$defs/Expr"
+              },
+              "minItems": 0,
+              "maxItems": 0
+            }
+          },
+          "required": [
+            "now"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "`[a, b, unite]` : différence `a − b` exprimée dans l'unité, tronquée vers zéro. Date/date-heure invalide ou null → null.",
+          "properties": {
+            "date_diff": {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "$ref": "#/$defs/Expr"
+                },
+                {
+                  "$ref": "#/$defs/Expr"
+                },
+                {
+                  "type": "string",
+                  "enum": [
+                    "seconds",
+                    "minutes",
+                    "hours",
+                    "days",
+                    "months",
+                    "years"
+                  ],
+                  "description": "Unité du résultat (littérale)."
+                }
+              ],
+              "items": false,
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "Arguments `[a, b, unite]`."
+            }
+          },
+          "required": [
+            "date_diff"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "FicheCode": {
+      "type": "object",
+      "description": "Génération du code fiche (identifiant lisible d'une soumission, ex. `DLA-BMP-07`).",
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "description": "Motif avec jetons : `{KEY}` = abréviation de la réponse source (3 premières lettres majuscules sans accent du code du choix, ou `Choice.abbr`), `{KEY:full}` = code complet, `{NN}` = compteur zéro-paddé sur `counter.width`.",
+          "minLength": 1,
+          "examples": [
+            "{VILLE}-{QUARTIER}-{NN}"
+          ]
+        },
+        "sources": {
+          "type": "object",
+          "description": "Jeton `KEY` → clé de la question (select_one, text ou calculate) qui l'alimente.",
+          "patternProperties": {
+            "^[A-Z][A-Z0-9_]{0,19}$": {
+              "$ref": "#/$defs/Key",
+              "description": "Clé de la question source."
+            }
+          },
+          "additionalProperties": false,
+          "default": {}
+        },
+        "counter": {
+          "type": "object",
+          "description": "Paramètres du compteur `{NN}`.",
+          "properties": {
+            "width": {
+              "type": "integer",
+              "description": "Nombre minimal de chiffres (zéro-padding).",
+              "minimum": 1,
+              "maximum": 6,
+              "default": 2
+            },
+            "scope": {
+              "type": "string",
+              "description": "Portée du compteur : `enumerator` (par enquêteur), `device` (par appareil), `zone` (par zone d'affectation), `survey` (global, réattribué par le serveur), `sources` (par combinaison de valeurs des sources, dans la numérotation de l'enquêteur).",
+              "enum": [
+                "enumerator",
+                "device",
+                "zone",
+                "survey",
+                "sources"
+              ],
+              "default": "enumerator"
+            },
+            "start": {
+              "type": "integer",
+              "description": "Première valeur du compteur.",
+              "minimum": 0,
+              "default": 1
+            }
+          },
+          "required": [],
+          "additionalProperties": false,
+          "default": {
+            "width": 2,
+            "scope": "enumerator",
+            "start": 1
+          }
+        }
+      },
+      "required": [
+        "pattern"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "pattern": "{VILLE}-{QUARTIER}-{NN}",
+          "sources": {
+            "VILLE": "A_ville",
+            "QUARTIER": "A_quartier"
+          },
+          "counter": {
+            "width": 2,
+            "scope": "enumerator"
+          }
+        }
+      ]
+    },
+    "Quota": {
+      "type": "object",
+      "description": "Objectif ou plafond de collecte, compté sur les soumissions valides (`_status == \"completed\"`) satisfaisant `filter`.",
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Identifiant du quota (espace de noms propre).",
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,39}$"
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé affiché."
+        },
+        "target": {
+          "type": "integer",
+          "description": "Cible (objectif si `max` est faux, plafond sinon). Pour `scope: answer`, cible par valeur ; pour `scope: distinct`, nombre minimal de valeurs distinctes.",
+          "minimum": 1
+        },
+        "scope": {
+          "type": "string",
+          "description": "`survey` : total ; `zone` : par zone ; `enumerator` : par enquêteur ; `answer` : par valeur de `question` ; `distinct` : nombre de valeurs distinctes de `question`.",
+          "enum": [
+            "survey",
+            "zone",
+            "enumerator",
+            "answer",
+            "distinct"
+          ],
+          "default": "survey"
+        },
+        "question": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé de la question de ventilation (obligatoire pour `answer` et `distinct`)."
+        },
+        "targets": {
+          "type": "object",
+          "description": "Pour `scope: answer` : cible spécifique par valeur, prioritaire sur `target`.",
+          "patternProperties": {
+            "^[A-Za-z0-9][A-Za-z0-9_]{0,59}$": {
+              "type": "integer",
+              "description": "Cible pour cette valeur.",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "max": {
+          "type": "boolean",
+          "description": "Vrai = plafond (le dépassement déclenche une alerte et le drapeau `quota_exceeded`) ; faux = objectif.",
+          "default": false
+        },
+        "filter": {
+          "$ref": "#/$defs/Expr",
+          "description": "Expression booléenne évaluée par soumission ; seules les soumissions vraies sont comptées."
+        }
+      },
+      "required": [
+        "key",
+        "label",
+        "target"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "key": "valides",
+          "label": {
+            "fr": "Fiches valides"
+          },
+          "target": 30,
+          "scope": "survey"
+        },
+        {
+          "key": "quartiers",
+          "label": {
+            "fr": "Quartiers distincts"
+          },
+          "target": 3,
+          "scope": "distinct",
+          "question": "A_quartier"
+        },
+        {
+          "key": "reseau",
+          "label": {
+            "fr": "Max 5 par réseau"
+          },
+          "target": 5,
+          "scope": "answer",
+          "question": "A_reseau",
+          "max": true
+        }
+      ]
+    },
+    "Kpi": {
+      "type": "object",
+      "description": "Indicateur (ratio) calculé par le serveur sur les soumissions.",
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Identifiant du KPI (espace de noms propre).",
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,39}$"
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé affiché."
+        },
+        "numerator": {
+          "$ref": "#/$defs/Expr",
+          "description": "Expression booléenne évaluée par soumission (réponses de base + réponses des étapes de suivi) ; compte les soumissions vraies parmi le dénominateur."
+        },
+        "denominator": {
+          "description": "`valid` : soumissions valides (complètes, non rejetées) ; `all` : toutes les soumissions non rejetées, hors cible incluses ; ou expression booléenne définissant l'ensemble.",
+          "default": "valid",
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "valid",
+                "all"
+              ]
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "format": {
+          "type": "string",
+          "description": "Présentation : pourcentage, ratio décimal ou simple compte du numérateur.",
+          "enum": [
+            "percent",
+            "ratio",
+            "count"
+          ],
+          "default": "percent"
+        }
+      },
+      "required": [
+        "key",
+        "label",
+        "numerator"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "key": "taux_acompte",
+          "label": {
+            "fr": "Taux d'acompte"
+          },
+          "numerator": {
+            "==": [
+              {
+                "var": "decision"
+              },
+              "oui_acompte"
+            ]
+          },
+          "denominator": "valid"
+        },
+        {
+          "key": "taux_retrait",
+          "label": {
+            "fr": "Taux de retrait parmi les acomptes"
+          },
+          "numerator": {
+            "==": [
+              {
+                "var": "j7_retire"
+              },
+              "oui"
+            ]
+          },
+          "denominator": {
+            "==": [
+              {
+                "var": "decision"
+              },
+              "oui_acompte"
+            ]
+          }
+        }
+      ]
+    },
+    "Geo": {
+      "type": "object",
+      "description": "Capture GPS automatique de la soumission.",
+      "properties": {
+        "capture": {
+          "type": "string",
+          "description": "Moment de capture : aucune, au début, à la fin, ou les deux.",
+          "enum": [
+            "none",
+            "start",
+            "end",
+            "both"
+          ],
+          "default": "none"
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Vrai = la finalisation est bloquée sans position valide.",
+          "default": false
+        },
+        "accuracy_max_m": {
+          "type": "number",
+          "description": "Précision maximale acceptée en mètres ; au-delà, la capture est retentée puis signalée.",
+          "exclusiveMinimum": 0
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "default": {
+        "capture": "none",
+        "required": false
+      }
+    },
+    "Timing": {
+      "type": "object",
+      "description": "Règles de durée d'entretien.",
+      "properties": {
+        "min_duration_seconds": {
+          "type": "integer",
+          "description": "Durée minimale ; en dessous, le serveur pose le drapeau `too_fast`.",
+          "minimum": 0
+        },
+        "max_duration_seconds": {
+          "type": "integer",
+          "description": "Durée maximale indicative (avertissement).",
+          "minimum": 1
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "Settings": {
+      "type": "object",
+      "description": "Paramètres du formulaire.",
+      "properties": {
+        "languages": {
+          "type": "array",
+          "description": "Langues disponibles (codes).",
+          "items": {
+            "$ref": "#/$defs/LanguageCode"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "default_language": {
+          "$ref": "#/$defs/LanguageCode",
+          "description": "Langue par défaut : clé obligatoire de chaque `I18n` ; langue de repli."
+        },
+        "fiche_code": {
+          "$ref": "#/$defs/FicheCode",
+          "description": "Génération du code fiche ; absent = pas de code fiche."
+        },
+        "quotas": {
+          "type": "array",
+          "description": "Quotas de collecte.",
+          "items": {
+            "$ref": "#/$defs/Quota"
+          },
+          "default": []
+        },
+        "kpis": {
+          "type": "array",
+          "description": "Indicateurs calculés.",
+          "items": {
+            "$ref": "#/$defs/Kpi"
+          },
+          "default": []
+        },
+        "geo": {
+          "$ref": "#/$defs/Geo",
+          "description": "Capture GPS automatique."
+        },
+        "timing": {
+          "$ref": "#/$defs/Timing",
+          "description": "Règles de durée."
+        },
+        "duplicate_keys": {
+          "type": "array",
+          "description": "Clés dont la combinaison de valeurs identifie un doublon probable (drapeau `duplicate`).",
+          "items": {
+            "$ref": "#/$defs/Key"
+          },
+          "default": [],
+          "uniqueItems": true
+        },
+        "pagination": {
+          "type": "string",
+          "description": "Découpage des écrans : une section par écran ou une question par écran.",
+          "enum": [
+            "section",
+            "question"
+          ],
+          "default": "section"
+        },
+        "allow_public_link": {
+          "type": "boolean",
+          "description": "Autorise la collecte via lien public (les questions `tags: [\"pii\"]` et les notes enquêteur en sont exclues).",
+          "default": false
+        },
+        "enumerator_can_edit_after_submit": {
+          "type": "boolean",
+          "description": "Vrai = un renvoi du même uuid met à jour la soumission (dernier `client_updated_at` gagne) tant qu'elle n'est ni validée ni rejetée.",
+          "default": false
+        },
+        "followup_contact_keys": {
+          "type": "array",
+          "description": "Clés des questions (nom, téléphone WhatsApp…) affichées à l'enquêteur dans la liste des suivis (`respondent_label`).",
+          "items": {
+            "$ref": "#/$defs/Key"
+          },
+          "default": [],
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "languages",
+        "default_language"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "languages": [
+            "fr",
+            "en"
+          ],
+          "default_language": "fr",
+          "pagination": "section",
+          "geo": {
+            "capture": "end",
+            "required": false,
+            "accuracy_max_m": 50
+          },
+          "timing": {
+            "min_duration_seconds": 300
+          },
+          "duplicate_keys": [
+            "whatsapp"
+          ]
+        }
+      ]
+    },
+    "Choice": {
+      "type": "object",
+      "description": "Option d'une liste de choix.",
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/ChoiceName",
+          "description": "Code stocké dans la réponse."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé affiché."
+        },
+        "abbr": {
+          "type": "string",
+          "description": "Abréviation utilisée par le jeton `{KEY}` du code fiche à la place de la règle des 3 lettres.",
+          "pattern": "^[A-Z0-9]{1,6}$"
+        },
+        "filter": {
+          "type": "object",
+          "description": "Sélection en cascade : le choix n'est proposé que si chaque question parente a la valeur indiquée (ET).",
+          "patternProperties": {
+            "^[A-Za-z][A-Za-z0-9_]{0,39}$": {
+              "description": "Valeur attendue de la question parente.",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            }
+          },
+          "additionalProperties": false,
+          "minProperties": 1
+        }
+      },
+      "required": [
+        "name",
+        "label"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "name": "bonamoussadi",
+          "label": {
+            "fr": "Bonamoussadi"
+          },
+          "abbr": "BMP",
+          "filter": {
+            "A_ville": "douala"
+          }
+        }
+      ]
+    },
+    "ChoicesRef": {
+      "description": "Nom d'une liste de `choice_lists` ou liste de choix en ligne.",
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,39}$",
+          "description": "Nom d'une liste déclarée dans `choice_lists`."
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Choice"
+          },
+          "minItems": 1,
+          "description": "Choix en ligne."
+        }
+      ]
+    },
+    "Other": {
+      "type": "object",
+      "description": "Bloc « Autre : précisez » : quand `choice` est sélectionné, un champ texte compagnon `{key}_other` (ou `other.key`) est affiché.",
+      "properties": {
+        "choice": {
+          "$ref": "#/$defs/ChoiceName",
+          "description": "Code du choix qui déclenche le champ (doit exister dans la liste)."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé du champ texte (défaut : « Précisez »)."
+        },
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé explicite de la réponse compagnon (défaut `{key}_other`)."
+        },
+        "required": {
+          "type": "boolean",
+          "description": "Vrai = le texte est obligatoire quand le choix est sélectionné (erreur `other_required`).",
+          "default": true
+        }
+      },
+      "required": [
+        "choice"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "choice": "autre",
+          "label": {
+            "fr": "Précisez"
+          }
+        }
+      ]
+    },
+    "Postcode": {
+      "type": "object",
+      "description": "Post-codage enquêteur d'un verbatim : après la saisie, l'enquêteur coche des thèmes ; réponse compagnon `{key}__codes`.",
+      "properties": {
+        "choices": {
+          "$ref": "#/$defs/ChoicesRef",
+          "description": "Thèmes proposés."
+        },
+        "multiple": {
+          "type": "boolean",
+          "description": "Vrai = plusieurs thèmes (liste) ; faux = un seul (chaîne).",
+          "default": true
+        },
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé explicite de la réponse compagnon (défaut `{key}__codes`)."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Consigne affichée (défaut : « Thèmes »)."
+        }
+      },
+      "required": [
+        "choices"
+      ],
+      "additionalProperties": false
+    },
+    "Q_select_one": {
+      "type": "object",
+      "description": "Choix unique ; valeur = code du choix (chaîne).",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de la question ; sert de nom de colonne et de variable Logic."
+        },
+        "type": {
+          "type": "string",
+          "const": "select_one",
+          "description": "Type de question."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé posé au répondant (interpolation `${cle}` autorisée)."
+        },
+        "hint": {
+          "$ref": "#/$defs/I18n",
+          "description": "Aide contextuelle affichée sous le libellé."
+        },
+        "required": {
+          "description": "Obligatoire : booléen ou expression booléenne évaluée dynamiquement.",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "required_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché si la question obligatoire est vide."
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition de pertinence ; absente = visible."
+        },
+        "constraint": {
+          "$ref": "#/$defs/Expr",
+          "description": "Contrainte évaluée seulement si la question est répondue ; `false` → erreur `constraint`."
+        },
+        "constraint_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché quand la contrainte échoue."
+        },
+        "read_only": {
+          "description": "Lecture seule (valeur issue de `default` ou pré-remplie).",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "default": {
+          "$ref": "#/$defs/Expr",
+          "description": "Valeur initiale, évaluée une fois lorsque la question devient visible."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Étiquettes libres ; `pii` marque une donnée personnelle (exclue des liens publics) ; `enumerator_only` marque une question réservée à l'enquêteur (jamais rendue en lien public).",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "choices": {
+          "$ref": "#/$defs/ChoicesRef",
+          "description": "Liste des choix."
+        },
+        "other": {
+          "$ref": "#/$defs/Other",
+          "description": "Bloc « Autre : précisez »."
+        },
+        "appearance": {
+          "type": "string",
+          "description": "Rendu.",
+          "enum": [
+            "radio",
+            "dropdown",
+            "buttons"
+          ],
+          "default": "radio"
+        }
+      },
+      "required": [
+        "key",
+        "type",
+        "label",
+        "choices"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "key": "D2",
+          "type": "select_one",
+          "label": {
+            "fr": "Vous est-il déjà arrivé de ne pas savoir où se trouvait l'un de vos enfants ?"
+          },
+          "required": true,
+          "choices": "oui_non"
+        }
+      ]
+    },
+    "Q_select_multiple": {
+      "type": "object",
+      "description": "Choix multiples ; valeur = liste de codes dans l'ordre de la liste.",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de la question ; sert de nom de colonne et de variable Logic."
+        },
+        "type": {
+          "type": "string",
+          "const": "select_multiple",
+          "description": "Type de question."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé posé au répondant (interpolation `${cle}` autorisée)."
+        },
+        "hint": {
+          "$ref": "#/$defs/I18n",
+          "description": "Aide contextuelle affichée sous le libellé."
+        },
+        "required": {
+          "description": "Obligatoire : booléen ou expression booléenne évaluée dynamiquement.",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "required_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché si la question obligatoire est vide."
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition de pertinence ; absente = visible."
+        },
+        "constraint": {
+          "$ref": "#/$defs/Expr",
+          "description": "Contrainte évaluée seulement si la question est répondue ; `false` → erreur `constraint`."
+        },
+        "constraint_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché quand la contrainte échoue."
+        },
+        "read_only": {
+          "description": "Lecture seule (valeur issue de `default` ou pré-remplie).",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "default": {
+          "$ref": "#/$defs/Expr",
+          "description": "Valeur initiale, évaluée une fois lorsque la question devient visible."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Étiquettes libres ; `pii` marque une donnée personnelle (exclue des liens publics) ; `enumerator_only` marque une question réservée à l'enquêteur (jamais rendue en lien public).",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "choices": {
+          "$ref": "#/$defs/ChoicesRef",
+          "description": "Liste des choix."
+        },
+        "other": {
+          "$ref": "#/$defs/Other",
+          "description": "Bloc « Autre : précisez »."
+        },
+        "min_selected": {
+          "type": "integer",
+          "description": "Nombre minimal de choix (erreur `min_selected`).",
+          "minimum": 0
+        },
+        "max_selected": {
+          "type": "integer",
+          "description": "Nombre maximal de choix (erreur `max_selected`).",
+          "minimum": 1
+        },
+        "exclusive": {
+          "type": "array",
+          "description": "Choix exclusifs : en sélectionner un désélectionne les autres (ex. « Aucune »).",
+          "items": {
+            "$ref": "#/$defs/ChoiceName"
+          },
+          "uniqueItems": true
+        },
+        "appearance": {
+          "type": "string",
+          "description": "Rendu.",
+          "enum": [
+            "checkbox",
+            "chips"
+          ],
+          "default": "checkbox"
+        }
+      },
+      "required": [
+        "key",
+        "type",
+        "label",
+        "choices"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "key": "F2",
+          "type": "select_multiple",
+          "label": {
+            "fr": "Parmi ces situations, laquelle est vraie chez vous ?"
+          },
+          "required": true,
+          "choices": "signaux",
+          "exclusive": [
+            "aucune"
+          ]
+        }
+      ]
+    },
+    "Q_rank": {
+      "type": "object",
+      "description": "Classement ; valeur = liste de codes dans l'ordre choisi.",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de la question ; sert de nom de colonne et de variable Logic."
+        },
+        "type": {
+          "type": "string",
+          "const": "rank",
+          "description": "Type de question."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé posé au répondant (interpolation `${cle}` autorisée)."
+        },
+        "hint": {
+          "$ref": "#/$defs/I18n",
+          "description": "Aide contextuelle affichée sous le libellé."
+        },
+        "required": {
+          "description": "Obligatoire : booléen ou expression booléenne évaluée dynamiquement.",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "required_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché si la question obligatoire est vide."
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition de pertinence ; absente = visible."
+        },
+        "constraint": {
+          "$ref": "#/$defs/Expr",
+          "description": "Contrainte évaluée seulement si la question est répondue ; `false` → erreur `constraint`."
+        },
+        "constraint_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché quand la contrainte échoue."
+        },
+        "read_only": {
+          "description": "Lecture seule (valeur issue de `default` ou pré-remplie).",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "default": {
+          "$ref": "#/$defs/Expr",
+          "description": "Valeur initiale, évaluée une fois lorsque la question devient visible."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Étiquettes libres ; `pii` marque une donnée personnelle (exclue des liens publics) ; `enumerator_only` marque une question réservée à l'enquêteur (jamais rendue en lien public).",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "choices": {
+          "$ref": "#/$defs/ChoicesRef",
+          "description": "Éléments à classer."
+        },
+        "min_ranked": {
+          "type": "integer",
+          "description": "Nombre minimal d'éléments à classer (défaut : tous).",
+          "minimum": 1
+        },
+        "max_ranked": {
+          "type": "integer",
+          "description": "Nombre maximal d'éléments classés.",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "key",
+        "type",
+        "label",
+        "choices"
+      ],
+      "additionalProperties": false
+    },
+    "Q_text": {
+      "type": "object",
+      "description": "Texte libre ; valeur = chaîne.",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de la question ; sert de nom de colonne et de variable Logic."
+        },
+        "type": {
+          "type": "string",
+          "const": "text",
+          "description": "Type de question."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé posé au répondant (interpolation `${cle}` autorisée)."
+        },
+        "hint": {
+          "$ref": "#/$defs/I18n",
+          "description": "Aide contextuelle affichée sous le libellé."
+        },
+        "required": {
+          "description": "Obligatoire : booléen ou expression booléenne évaluée dynamiquement.",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "required_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché si la question obligatoire est vide."
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition de pertinence ; absente = visible."
+        },
+        "constraint": {
+          "$ref": "#/$defs/Expr",
+          "description": "Contrainte évaluée seulement si la question est répondue ; `false` → erreur `constraint`."
+        },
+        "constraint_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché quand la contrainte échoue."
+        },
+        "read_only": {
+          "description": "Lecture seule (valeur issue de `default` ou pré-remplie).",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "default": {
+          "$ref": "#/$defs/Expr",
+          "description": "Valeur initiale, évaluée une fois lorsque la question devient visible."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Étiquettes libres ; `pii` marque une donnée personnelle (exclue des liens publics) ; `enumerator_only` marque une question réservée à l'enquêteur (jamais rendue en lien public).",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "appearance": {
+          "type": "string",
+          "description": "Champ court ou zone multiligne (verbatims).",
+          "enum": [
+            "short",
+            "multiline"
+          ],
+          "default": "short"
+        },
+        "format": {
+          "type": "string",
+          "description": "Clavier et validation de format (erreur `format`).",
+          "enum": [
+            "text",
+            "phone",
+            "email",
+            "url"
+          ],
+          "default": "text"
+        },
+        "min_length": {
+          "type": "integer",
+          "description": "Longueur minimale (erreur `min_length`).",
+          "minimum": 0
+        },
+        "max_length": {
+          "type": "integer",
+          "description": "Longueur maximale (erreur `max_length`).",
+          "minimum": 1
+        },
+        "postcode": {
+          "$ref": "#/$defs/Postcode",
+          "description": "Post-codage enquêteur du verbatim."
+        }
+      },
+      "required": [
+        "key",
+        "type",
+        "label"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "key": "Q6",
+          "type": "text",
+          "label": {
+            "fr": "Qu'est-ce qui vous empêcherait d'utiliser cette solution ?"
+          },
+          "appearance": "multiline",
+          "postcode": {
+            "choices": "freins",
+            "multiple": true
+          }
+        }
+      ]
+    },
+    "Q_integer": {
+      "type": "object",
+      "description": "Nombre entier ; valeur = entier JSON.",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de la question ; sert de nom de colonne et de variable Logic."
+        },
+        "type": {
+          "type": "string",
+          "const": "integer",
+          "description": "Type de question."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé posé au répondant (interpolation `${cle}` autorisée)."
+        },
+        "hint": {
+          "$ref": "#/$defs/I18n",
+          "description": "Aide contextuelle affichée sous le libellé."
+        },
+        "required": {
+          "description": "Obligatoire : booléen ou expression booléenne évaluée dynamiquement.",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "required_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché si la question obligatoire est vide."
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition de pertinence ; absente = visible."
+        },
+        "constraint": {
+          "$ref": "#/$defs/Expr",
+          "description": "Contrainte évaluée seulement si la question est répondue ; `false` → erreur `constraint`."
+        },
+        "constraint_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché quand la contrainte échoue."
+        },
+        "read_only": {
+          "description": "Lecture seule (valeur issue de `default` ou pré-remplie).",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "default": {
+          "$ref": "#/$defs/Expr",
+          "description": "Valeur initiale, évaluée une fois lorsque la question devient visible."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Étiquettes libres ; `pii` marque une donnée personnelle (exclue des liens publics) ; `enumerator_only` marque une question réservée à l'enquêteur (jamais rendue en lien public).",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "min": {
+          "type": "integer",
+          "description": "Minimum inclus (erreur `min`)."
+        },
+        "max": {
+          "type": "integer",
+          "description": "Maximum inclus (erreur `max`)."
+        }
+      },
+      "required": [
+        "key",
+        "type",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "Q_decimal": {
+      "type": "object",
+      "description": "Nombre décimal ; valeur = nombre JSON.",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de la question ; sert de nom de colonne et de variable Logic."
+        },
+        "type": {
+          "type": "string",
+          "const": "decimal",
+          "description": "Type de question."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé posé au répondant (interpolation `${cle}` autorisée)."
+        },
+        "hint": {
+          "$ref": "#/$defs/I18n",
+          "description": "Aide contextuelle affichée sous le libellé."
+        },
+        "required": {
+          "description": "Obligatoire : booléen ou expression booléenne évaluée dynamiquement.",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "required_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché si la question obligatoire est vide."
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition de pertinence ; absente = visible."
+        },
+        "constraint": {
+          "$ref": "#/$defs/Expr",
+          "description": "Contrainte évaluée seulement si la question est répondue ; `false` → erreur `constraint`."
+        },
+        "constraint_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché quand la contrainte échoue."
+        },
+        "read_only": {
+          "description": "Lecture seule (valeur issue de `default` ou pré-remplie).",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "default": {
+          "$ref": "#/$defs/Expr",
+          "description": "Valeur initiale, évaluée une fois lorsque la question devient visible."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Étiquettes libres ; `pii` marque une donnée personnelle (exclue des liens publics) ; `enumerator_only` marque une question réservée à l'enquêteur (jamais rendue en lien public).",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "min": {
+          "type": "number",
+          "description": "Minimum inclus (erreur `min`)."
+        },
+        "max": {
+          "type": "number",
+          "description": "Maximum inclus (erreur `max`)."
+        },
+        "decimals": {
+          "type": "integer",
+          "description": "Nombre maximal de décimales.",
+          "minimum": 0,
+          "maximum": 10
+        }
+      },
+      "required": [
+        "key",
+        "type",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "Q_currency": {
+      "type": "object",
+      "description": "Montant monétaire ; valeur = nombre JSON (unité de la devise, sans séparateur).",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de la question ; sert de nom de colonne et de variable Logic."
+        },
+        "type": {
+          "type": "string",
+          "const": "currency",
+          "description": "Type de question."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé posé au répondant (interpolation `${cle}` autorisée)."
+        },
+        "hint": {
+          "$ref": "#/$defs/I18n",
+          "description": "Aide contextuelle affichée sous le libellé."
+        },
+        "required": {
+          "description": "Obligatoire : booléen ou expression booléenne évaluée dynamiquement.",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "required_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché si la question obligatoire est vide."
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition de pertinence ; absente = visible."
+        },
+        "constraint": {
+          "$ref": "#/$defs/Expr",
+          "description": "Contrainte évaluée seulement si la question est répondue ; `false` → erreur `constraint`."
+        },
+        "constraint_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché quand la contrainte échoue."
+        },
+        "read_only": {
+          "description": "Lecture seule (valeur issue de `default` ou pré-remplie).",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "default": {
+          "$ref": "#/$defs/Expr",
+          "description": "Valeur initiale, évaluée une fois lorsque la question devient visible."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Étiquettes libres ; `pii` marque une donnée personnelle (exclue des liens publics) ; `enumerator_only` marque une question réservée à l'enquêteur (jamais rendue en lien public).",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "currency": {
+          "type": "string",
+          "description": "Code ISO 4217.",
+          "pattern": "^[A-Z]{3}$",
+          "default": "XAF"
+        },
+        "min": {
+          "type": "number",
+          "description": "Minimum inclus (erreur `min`)."
+        },
+        "max": {
+          "type": "number",
+          "description": "Maximum inclus (erreur `max`)."
+        },
+        "decimals": {
+          "type": "integer",
+          "description": "Décimales autorisées (0 pour le FCFA).",
+          "minimum": 0,
+          "maximum": 4,
+          "default": 0
+        }
+      },
+      "required": [
+        "key",
+        "type",
+        "label"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "key": "F2_prix",
+          "type": "currency",
+          "label": {
+            "fr": "À partir de quel prix d'appareil diriez-vous : « ça ne vaut pas le coup » ?"
+          },
+          "currency": "XAF",
+          "min": 0
+        }
+      ]
+    },
+    "Q_date": {
+      "type": "object",
+      "description": "Date ; valeur = `YYYY-MM-DD`.",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de la question ; sert de nom de colonne et de variable Logic."
+        },
+        "type": {
+          "type": "string",
+          "const": "date",
+          "description": "Type de question."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé posé au répondant (interpolation `${cle}` autorisée)."
+        },
+        "hint": {
+          "$ref": "#/$defs/I18n",
+          "description": "Aide contextuelle affichée sous le libellé."
+        },
+        "required": {
+          "description": "Obligatoire : booléen ou expression booléenne évaluée dynamiquement.",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "required_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché si la question obligatoire est vide."
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition de pertinence ; absente = visible."
+        },
+        "constraint": {
+          "$ref": "#/$defs/Expr",
+          "description": "Contrainte évaluée seulement si la question est répondue ; `false` → erreur `constraint`."
+        },
+        "constraint_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché quand la contrainte échoue."
+        },
+        "read_only": {
+          "description": "Lecture seule (valeur issue de `default` ou pré-remplie).",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "default": {
+          "$ref": "#/$defs/Expr",
+          "description": "Valeur initiale, évaluée une fois lorsque la question devient visible."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Étiquettes libres ; `pii` marque une donnée personnelle (exclue des liens publics) ; `enumerator_only` marque une question réservée à l'enquêteur (jamais rendue en lien public).",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "min": {
+          "type": "string",
+          "description": "Date minimale incluse.",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "max": {
+          "type": "string",
+          "description": "Date maximale incluse.",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [
+        "key",
+        "type",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "Q_time": {
+      "type": "object",
+      "description": "Heure ; valeur = `HH:MM:SS`.",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de la question ; sert de nom de colonne et de variable Logic."
+        },
+        "type": {
+          "type": "string",
+          "const": "time",
+          "description": "Type de question."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé posé au répondant (interpolation `${cle}` autorisée)."
+        },
+        "hint": {
+          "$ref": "#/$defs/I18n",
+          "description": "Aide contextuelle affichée sous le libellé."
+        },
+        "required": {
+          "description": "Obligatoire : booléen ou expression booléenne évaluée dynamiquement.",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "required_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché si la question obligatoire est vide."
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition de pertinence ; absente = visible."
+        },
+        "constraint": {
+          "$ref": "#/$defs/Expr",
+          "description": "Contrainte évaluée seulement si la question est répondue ; `false` → erreur `constraint`."
+        },
+        "constraint_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché quand la contrainte échoue."
+        },
+        "read_only": {
+          "description": "Lecture seule (valeur issue de `default` ou pré-remplie).",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "default": {
+          "$ref": "#/$defs/Expr",
+          "description": "Valeur initiale, évaluée une fois lorsque la question devient visible."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Étiquettes libres ; `pii` marque une donnée personnelle (exclue des liens publics) ; `enumerator_only` marque une question réservée à l'enquêteur (jamais rendue en lien public).",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "min": {
+          "type": "string",
+          "description": "Heure minimale incluse.",
+          "pattern": "^\\d{2}:\\d{2}:\\d{2}$"
+        },
+        "max": {
+          "type": "string",
+          "description": "Heure maximale incluse.",
+          "pattern": "^\\d{2}:\\d{2}:\\d{2}$"
+        }
+      },
+      "required": [
+        "key",
+        "type",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "Q_datetime": {
+      "type": "object",
+      "description": "Date-heure ; valeur = ISO-8601 avec décalage.",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de la question ; sert de nom de colonne et de variable Logic."
+        },
+        "type": {
+          "type": "string",
+          "const": "datetime",
+          "description": "Type de question."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé posé au répondant (interpolation `${cle}` autorisée)."
+        },
+        "hint": {
+          "$ref": "#/$defs/I18n",
+          "description": "Aide contextuelle affichée sous le libellé."
+        },
+        "required": {
+          "description": "Obligatoire : booléen ou expression booléenne évaluée dynamiquement.",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "required_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché si la question obligatoire est vide."
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition de pertinence ; absente = visible."
+        },
+        "constraint": {
+          "$ref": "#/$defs/Expr",
+          "description": "Contrainte évaluée seulement si la question est répondue ; `false` → erreur `constraint`."
+        },
+        "constraint_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché quand la contrainte échoue."
+        },
+        "read_only": {
+          "description": "Lecture seule (valeur issue de `default` ou pré-remplie).",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "default": {
+          "$ref": "#/$defs/Expr",
+          "description": "Valeur initiale, évaluée une fois lorsque la question devient visible."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Étiquettes libres ; `pii` marque une donnée personnelle (exclue des liens publics) ; `enumerator_only` marque une question réservée à l'enquêteur (jamais rendue en lien public).",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "min": {
+          "type": "string",
+          "description": "Borne minimale incluse.",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?(Z|[+-]\\d{2}:\\d{2})$"
+        },
+        "max": {
+          "type": "string",
+          "description": "Borne maximale incluse.",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?(Z|[+-]\\d{2}:\\d{2})$"
+        }
+      },
+      "required": [
+        "key",
+        "type",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "Q_geopoint": {
+      "type": "object",
+      "description": "Position GPS ; valeur = `{lat, lng, accuracy, ts}`.",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de la question ; sert de nom de colonne et de variable Logic."
+        },
+        "type": {
+          "type": "string",
+          "const": "geopoint",
+          "description": "Type de question."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé posé au répondant (interpolation `${cle}` autorisée)."
+        },
+        "hint": {
+          "$ref": "#/$defs/I18n",
+          "description": "Aide contextuelle affichée sous le libellé."
+        },
+        "required": {
+          "description": "Obligatoire : booléen ou expression booléenne évaluée dynamiquement.",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "required_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché si la question obligatoire est vide."
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition de pertinence ; absente = visible."
+        },
+        "constraint": {
+          "$ref": "#/$defs/Expr",
+          "description": "Contrainte évaluée seulement si la question est répondue ; `false` → erreur `constraint`."
+        },
+        "constraint_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché quand la contrainte échoue."
+        },
+        "read_only": {
+          "description": "Lecture seule (valeur issue de `default` ou pré-remplie).",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "default": {
+          "$ref": "#/$defs/Expr",
+          "description": "Valeur initiale, évaluée une fois lorsque la question devient visible."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Étiquettes libres ; `pii` marque une donnée personnelle (exclue des liens publics) ; `enumerator_only` marque une question réservée à l'enquêteur (jamais rendue en lien public).",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "accuracy_max_m": {
+          "type": "number",
+          "description": "Précision maximale acceptée en mètres (erreur `accuracy`).",
+          "exclusiveMinimum": 0
+        },
+        "allow_manual": {
+          "type": "boolean",
+          "description": "Autorise la saisie manuelle si le GPS échoue.",
+          "default": false
+        }
+      },
+      "required": [
+        "key",
+        "type",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "Q_photo": {
+      "type": "object",
+      "description": "Photo ; valeur = descripteur média `{media_id?, sha256, mime, size}`.",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de la question ; sert de nom de colonne et de variable Logic."
+        },
+        "type": {
+          "type": "string",
+          "const": "photo",
+          "description": "Type de question."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé posé au répondant (interpolation `${cle}` autorisée)."
+        },
+        "hint": {
+          "$ref": "#/$defs/I18n",
+          "description": "Aide contextuelle affichée sous le libellé."
+        },
+        "required": {
+          "description": "Obligatoire : booléen ou expression booléenne évaluée dynamiquement.",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "required_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché si la question obligatoire est vide."
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition de pertinence ; absente = visible."
+        },
+        "constraint": {
+          "$ref": "#/$defs/Expr",
+          "description": "Contrainte évaluée seulement si la question est répondue ; `false` → erreur `constraint`."
+        },
+        "constraint_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché quand la contrainte échoue."
+        },
+        "read_only": {
+          "description": "Lecture seule (valeur issue de `default` ou pré-remplie).",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "default": {
+          "$ref": "#/$defs/Expr",
+          "description": "Valeur initiale, évaluée une fois lorsque la question devient visible."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Étiquettes libres ; `pii` marque une donnée personnelle (exclue des liens publics) ; `enumerator_only` marque une question réservée à l'enquêteur (jamais rendue en lien public).",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "source": {
+          "type": "string",
+          "description": "Origine autorisée.",
+          "enum": [
+            "camera",
+            "gallery",
+            "both"
+          ],
+          "default": "camera"
+        }
+      },
+      "required": [
+        "key",
+        "type",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "Q_signature": {
+      "type": "object",
+      "description": "Signature tracée à l'écran ; valeur = descripteur média (PNG).",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de la question ; sert de nom de colonne et de variable Logic."
+        },
+        "type": {
+          "type": "string",
+          "const": "signature",
+          "description": "Type de question."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé posé au répondant (interpolation `${cle}` autorisée)."
+        },
+        "hint": {
+          "$ref": "#/$defs/I18n",
+          "description": "Aide contextuelle affichée sous le libellé."
+        },
+        "required": {
+          "description": "Obligatoire : booléen ou expression booléenne évaluée dynamiquement.",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "required_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché si la question obligatoire est vide."
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition de pertinence ; absente = visible."
+        },
+        "constraint": {
+          "$ref": "#/$defs/Expr",
+          "description": "Contrainte évaluée seulement si la question est répondue ; `false` → erreur `constraint`."
+        },
+        "constraint_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché quand la contrainte échoue."
+        },
+        "read_only": {
+          "description": "Lecture seule (valeur issue de `default` ou pré-remplie).",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "default": {
+          "$ref": "#/$defs/Expr",
+          "description": "Valeur initiale, évaluée une fois lorsque la question devient visible."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Étiquettes libres ; `pii` marque une donnée personnelle (exclue des liens publics) ; `enumerator_only` marque une question réservée à l'enquêteur (jamais rendue en lien public).",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "key",
+        "type",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "Q_audio": {
+      "type": "object",
+      "description": "Enregistrement audio ; valeur = descripteur média.",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de la question ; sert de nom de colonne et de variable Logic."
+        },
+        "type": {
+          "type": "string",
+          "const": "audio",
+          "description": "Type de question."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé posé au répondant (interpolation `${cle}` autorisée)."
+        },
+        "hint": {
+          "$ref": "#/$defs/I18n",
+          "description": "Aide contextuelle affichée sous le libellé."
+        },
+        "required": {
+          "description": "Obligatoire : booléen ou expression booléenne évaluée dynamiquement.",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "required_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché si la question obligatoire est vide."
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition de pertinence ; absente = visible."
+        },
+        "constraint": {
+          "$ref": "#/$defs/Expr",
+          "description": "Contrainte évaluée seulement si la question est répondue ; `false` → erreur `constraint`."
+        },
+        "constraint_message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché quand la contrainte échoue."
+        },
+        "read_only": {
+          "description": "Lecture seule (valeur issue de `default` ou pré-remplie).",
+          "default": false,
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/Expr"
+            }
+          ]
+        },
+        "default": {
+          "$ref": "#/$defs/Expr",
+          "description": "Valeur initiale, évaluée une fois lorsque la question devient visible."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Étiquettes libres ; `pii` marque une donnée personnelle (exclue des liens publics) ; `enumerator_only` marque une question réservée à l'enquêteur (jamais rendue en lien public).",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "max_duration_seconds": {
+          "type": "integer",
+          "description": "Durée maximale d'enregistrement.",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "key",
+        "type",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    "Q_note": {
+      "type": "object",
+      "description": "Texte affiché sans réponse (consigne enquêteur, script à lire, information).",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de la question ; sert de nom de colonne et de variable Logic."
+        },
+        "type": {
+          "type": "string",
+          "const": "note",
+          "description": "Type de question."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé posé au répondant (interpolation `${cle}` autorisée)."
+        },
+        "audience": {
+          "type": "string",
+          "description": "Destinataire : enquêteur seulement (masqué sur lien public), répondant, ou les deux.",
+          "enum": [
+            "enumerator",
+            "respondent",
+            "both"
+          ],
+          "default": "both"
+        },
+        "style": {
+          "type": "string",
+          "description": "`info` neutre, `warning` mise en garde, `script` = texte à lire tel quel.",
+          "enum": [
+            "info",
+            "warning",
+            "script"
+          ],
+          "default": "info"
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition d'affichage."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Étiquettes libres.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "key",
+        "type",
+        "label"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "key": "E_script",
+          "type": "note",
+          "label": {
+            "fr": "« Il s'agit d'un petit appareil que l'enfant met dans son sac à dos… »"
+          },
+          "audience": "respondent",
+          "style": "script"
+        }
+      ]
+    },
+    "Q_calculate": {
+      "type": "object",
+      "description": "Champ calculé, réévalué après chaque réponse ; valeur = résultat de l'expression (inclus dans le payload).",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de la question ; sert de nom de colonne et de variable Logic."
+        },
+        "type": {
+          "type": "string",
+          "const": "calculate",
+          "description": "Type de question."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé posé au répondant (interpolation `${cle}` autorisée)."
+        },
+        "expression": {
+          "$ref": "#/$defs/Expr",
+          "description": "Expression dont le résultat est la valeur du champ."
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition de pertinence ; non pertinent → valeur null et exclue du payload."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Étiquettes libres.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "key",
+        "type",
+        "expression"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "key": "nb_signaux",
+          "type": "calculate",
+          "expression": {
+            "count_selected": [
+              {
+                "var": "F2"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "Q_stop": {
+      "type": "object",
+      "description": "Fin anticipée : quand `relevant` devient vrai, l'entretien s'arrête avec `status: screened_out` et `end_reason: <key>` ; la soumission est synchronisée.",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de la question ; sert de nom de colonne et de variable Logic."
+        },
+        "type": {
+          "type": "string",
+          "const": "stop",
+          "description": "Type de question."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Libellé posé au répondant (interpolation `${cle}` autorisée)."
+        },
+        "message": {
+          "$ref": "#/$defs/I18n",
+          "description": "Message affiché à l'enquêteur (ex. remercier et partir)."
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition de déclenchement (obligatoire)."
+        }
+      },
+      "required": [
+        "key",
+        "type",
+        "label",
+        "message",
+        "relevant"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "key": "stop_B",
+          "type": "stop",
+          "label": {
+            "fr": "Fin de l'entretien"
+          },
+          "message": {
+            "fr": "La personne refuse de participer. Remercier et partir."
+          },
+          "relevant": {
+            "==": [
+              {
+                "var": "B_accepte"
+              },
+              "non"
+            ]
+          }
+        }
+      ]
+    },
+    "Question": {
+      "description": "Question, discriminée par `type`.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Q_select_one"
+        },
+        {
+          "$ref": "#/$defs/Q_select_multiple"
+        },
+        {
+          "$ref": "#/$defs/Q_rank"
+        },
+        {
+          "$ref": "#/$defs/Q_text"
+        },
+        {
+          "$ref": "#/$defs/Q_integer"
+        },
+        {
+          "$ref": "#/$defs/Q_decimal"
+        },
+        {
+          "$ref": "#/$defs/Q_currency"
+        },
+        {
+          "$ref": "#/$defs/Q_date"
+        },
+        {
+          "$ref": "#/$defs/Q_time"
+        },
+        {
+          "$ref": "#/$defs/Q_datetime"
+        },
+        {
+          "$ref": "#/$defs/Q_geopoint"
+        },
+        {
+          "$ref": "#/$defs/Q_photo"
+        },
+        {
+          "$ref": "#/$defs/Q_signature"
+        },
+        {
+          "$ref": "#/$defs/Q_audio"
+        },
+        {
+          "$ref": "#/$defs/Q_note"
+        },
+        {
+          "$ref": "#/$defs/Q_calculate"
+        },
+        {
+          "$ref": "#/$defs/Q_stop"
+        }
+      ]
+    },
+    "StageQuestion": {
+      "description": "Question d'une étape de suivi (tous les types sauf `stop`).",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Q_select_one"
+        },
+        {
+          "$ref": "#/$defs/Q_select_multiple"
+        },
+        {
+          "$ref": "#/$defs/Q_rank"
+        },
+        {
+          "$ref": "#/$defs/Q_text"
+        },
+        {
+          "$ref": "#/$defs/Q_integer"
+        },
+        {
+          "$ref": "#/$defs/Q_decimal"
+        },
+        {
+          "$ref": "#/$defs/Q_currency"
+        },
+        {
+          "$ref": "#/$defs/Q_date"
+        },
+        {
+          "$ref": "#/$defs/Q_time"
+        },
+        {
+          "$ref": "#/$defs/Q_datetime"
+        },
+        {
+          "$ref": "#/$defs/Q_geopoint"
+        },
+        {
+          "$ref": "#/$defs/Q_photo"
+        },
+        {
+          "$ref": "#/$defs/Q_signature"
+        },
+        {
+          "$ref": "#/$defs/Q_audio"
+        },
+        {
+          "$ref": "#/$defs/Q_note"
+        },
+        {
+          "$ref": "#/$defs/Q_calculate"
+        }
+      ]
+    },
+    "Repeat": {
+      "type": "object",
+      "description": "Répétition d'un groupe (une instance par enfant, par exemple).",
+      "properties": {
+        "min": {
+          "type": "integer",
+          "description": "Nombre minimal d'instances.",
+          "minimum": 0,
+          "default": 0
+        },
+        "max": {
+          "type": "integer",
+          "description": "Nombre maximal d'instances.",
+          "minimum": 1
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "Group": {
+      "type": "object",
+      "description": "Groupe de questions, optionnellement répété ; les enfants d'un groupe non répété restent des clés de premier niveau.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "group",
+          "description": "Discriminant."
+        },
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique du groupe (variable Logic = liste des instances si répété)."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Titre du groupe."
+        },
+        "description": {
+          "$ref": "#/$defs/I18n",
+          "description": "Texte d'introduction."
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition de pertinence (masque tous les enfants)."
+        },
+        "repeat": {
+          "$ref": "#/$defs/Repeat",
+          "description": "Présent = groupe répété ; valeur = `[{enfant: valeur}]`."
+        },
+        "appearance": {
+          "type": "string",
+          "description": "`list` = questions empilées ; `matrix` = grille (une ligne par question, colonnes = choix communs).",
+          "enum": [
+            "list",
+            "matrix"
+          ],
+          "default": "list"
+        },
+        "items": {
+          "type": "array",
+          "description": "Questions du groupe (pas de groupe imbriqué).",
+          "items": {
+            "$ref": "#/$defs/Question"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "type",
+        "key",
+        "label",
+        "items"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "type": "group",
+          "key": "P1",
+          "label": {
+            "fr": "Composition utile"
+          },
+          "appearance": "matrix",
+          "items": [
+            {
+              "key": "P1_ecole_privee",
+              "type": "select_one",
+              "label": {
+                "fr": "École privée"
+              },
+              "choices": "oui_non"
+            }
+          ]
+        }
+      ]
+    },
+    "Section": {
+      "type": "object",
+      "description": "Section (page en pagination `section`).",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de la section."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Titre."
+        },
+        "description": {
+          "$ref": "#/$defs/I18n",
+          "description": "Introduction / consigne générale."
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition de pertinence (masque toute la section)."
+        },
+        "items": {
+          "type": "array",
+          "description": "Questions et groupes, dans l'ordre d'affichage.",
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/Question"
+              },
+              {
+                "$ref": "#/$defs/Group"
+              }
+            ]
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "key",
+        "label",
+        "items"
+      ],
+      "additionalProperties": false
+    },
+    "Stage": {
+      "type": "object",
+      "description": "Étape de suivi longitudinal (J+4, J+7…), due `due_offset_days` jours après `ended_at`, ouverte pendant `window_days`.",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé unique de l'étape."
+        },
+        "label": {
+          "$ref": "#/$defs/I18n",
+          "description": "Titre."
+        },
+        "description": {
+          "$ref": "#/$defs/I18n",
+          "description": "Consigne (ex. texte fixe du message WhatsApp)."
+        },
+        "due_offset_days": {
+          "type": "integer",
+          "description": "Décalage en jours après la fin de l'entretien de base.",
+          "minimum": 0
+        },
+        "window_days": {
+          "type": "integer",
+          "description": "Durée de la fenêtre après l'échéance ; au-delà, statut `missed`.",
+          "minimum": 1,
+          "default": 3
+        },
+        "channel": {
+          "type": "string",
+          "description": "Canal de contact prévu.",
+          "enum": [
+            "whatsapp",
+            "sms",
+            "call",
+            "visit"
+          ],
+          "default": "call"
+        },
+        "relevant": {
+          "$ref": "#/$defs/Expr",
+          "description": "Condition sur les réponses de base (et des étapes précédentes) ; évaluée à la réception puis à l'échéance ; fausse → étape `skipped`."
+        },
+        "items": {
+          "type": "array",
+          "description": "Questions de l'étape (clés globales, tout type sauf `stop`).",
+          "items": {
+            "$ref": "#/$defs/StageQuestion"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "key",
+        "label",
+        "due_offset_days",
+        "items"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "key": "j7",
+          "label": {
+            "fr": "J+7 — clôture retrait"
+          },
+          "due_offset_days": 7,
+          "window_days": 3,
+          "channel": "call",
+          "relevant": {
+            "==": [
+              {
+                "var": "decision"
+              },
+              "oui_acompte"
+            ]
+          },
+          "items": [
+            {
+              "key": "j7_retire",
+              "type": "select_one",
+              "label": {
+                "fr": "Appareil retiré ?"
+              },
+              "required": true,
+              "choices": "oui_non"
+            }
+          ]
+        }
+      ]
+    },
+    "GeoPointValue": {
+      "type": "object",
+      "description": "Position GPS.",
+      "properties": {
+        "lat": {
+          "type": "number",
+          "description": "Latitude en degrés décimaux.",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lng": {
+          "type": "number",
+          "description": "Longitude en degrés décimaux.",
+          "minimum": -180,
+          "maximum": 180
+        },
+        "accuracy": {
+          "type": "number",
+          "description": "Précision horizontale en mètres.",
+          "minimum": 0
+        },
+        "ts": {
+          "type": "string",
+          "description": "Horodatage ISO-8601 de la capture.",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?(Z|[+-]\\d{2}:\\d{2})$"
+        }
+      },
+      "required": [
+        "lat",
+        "lng"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "lat": 4.0511,
+          "lng": 9.7679,
+          "accuracy": 12.5,
+          "ts": "2026-09-15T10:04:00+01:00"
+        }
+      ]
+    },
+    "MediaValue": {
+      "type": "object",
+      "description": "Descripteur d'un média (photo, signature, audio) ; le fichier est envoyé séparément.",
+      "properties": {
+        "media_id": {
+          "type": "integer",
+          "description": "Identifiant serveur une fois le fichier reçu.",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "description": "Empreinte SHA-256 hexadécimale du fichier.",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "mime": {
+          "type": "string",
+          "description": "Type MIME.",
+          "pattern": "^[a-z]+/[A-Za-z0-9.+-]+$"
+        },
+        "size": {
+          "type": "integer",
+          "description": "Taille en octets.",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "sha256",
+        "mime",
+        "size"
+      ],
+      "additionalProperties": false
+    },
+    "AnswerValue": {
+      "description": "Valeur de réponse sérialisée : scalaire, liste de codes, géopoint, média ou instances d'un groupe répété.",
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "select_multiple / rank."
+        },
+        {
+          "$ref": "#/$defs/GeoPointValue"
+        },
+        {
+          "$ref": "#/$defs/MediaValue"
+        },
+        {
+          "type": "array",
+          "description": "Groupe répété : une instance par objet.",
+          "items": {
+            "type": "object",
+            "patternProperties": {
+              "^[A-Za-z][A-Za-z0-9_]{0,55}$": {
+                "$ref": "#/$defs/AnswerValue"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+    "Answers": {
+      "type": "object",
+      "description": "Réponses par clé (questions, calculs, compagnons `_other` / `__codes`). Questions non pertinentes ou sans réponse : clé absente.",
+      "patternProperties": {
+        "^[A-Za-z][A-Za-z0-9_]{0,55}$": {
+          "$ref": "#/$defs/AnswerValue"
+        }
+      },
+      "additionalProperties": false
+    },
+    "SubmissionMedia": {
+      "type": "object",
+      "description": "Média attendu pour une soumission (annonce ; envoi par `POST …/media/{questionKey}`).",
+      "properties": {
+        "question_key": {
+          "$ref": "#/$defs/Key",
+          "description": "Clé de la question média."
+        },
+        "repeat_index": {
+          "description": "Index (base 0) de l'instance si la question est dans un groupe répété.",
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sha256": {
+          "type": "string",
+          "description": "Empreinte SHA-256 du fichier.",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "mime": {
+          "type": "string",
+          "description": "Type MIME.",
+          "pattern": "^[a-z]+/[A-Za-z0-9.+-]+$"
+        },
+        "size": {
+          "type": "integer",
+          "description": "Taille en octets.",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "question_key",
+        "sha256",
+        "mime",
+        "size"
+      ],
+      "additionalProperties": false
+    },
+    "Submission": {
+      "type": "object",
+      "description": "Payload d'une soumission envoyée par le mobile (ou le lien public).",
+      "properties": {
+        "uuid": {
+          "type": "string",
+          "description": "Identifiant client (UUID v4), clé d'idempotence.",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+        },
+        "survey_id": {
+          "type": "integer",
+          "description": "Identifiant serveur du questionnaire.",
+          "minimum": 1
+        },
+        "form_version": {
+          "type": "integer",
+          "description": "Numéro `version` du DFS publié utilisé.",
+          "minimum": 1
+        },
+        "device_id": {
+          "description": "Identifiant de l'appareil (null pour le lien public).",
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fiche_code": {
+          "description": "Code fiche provisoire calculé côté client (le serveur peut le suffixer).",
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "zone": {
+          "description": "Zone d'affectation de l'enquêteur.",
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 100
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "language": {
+          "$ref": "#/$defs/LanguageCode",
+          "description": "Langue de l'entretien."
+        },
+        "started_at": {
+          "type": "string",
+          "description": "Début de l'entretien (ISO-8601, heure appareil).",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?(Z|[+-]\\d{2}:\\d{2})$"
+        },
+        "ended_at": {
+          "type": "string",
+          "description": "Fin de l'entretien ou du STOP.",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?(Z|[+-]\\d{2}:\\d{2})$"
+        },
+        "geo": {
+          "description": "Positions capturées selon `settings.geo`.",
+          "anyOf": [
+            {
+              "type": "object",
+              "description": "Captures GPS automatiques.",
+              "properties": {
+                "start": {
+                  "description": "Position au début.",
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/GeoPointValue"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "end": {
+                  "description": "Position à la fin.",
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/GeoPointValue"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "answers": {
+          "$ref": "#/$defs/Answers",
+          "description": "Réponses."
+        },
+        "end_reason": {
+          "description": "Clé de l'item `stop` déclencheur ; null si complète.",
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,39}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string",
+          "description": "Issue de l'entretien.",
+          "enum": [
+            "completed",
+            "screened_out"
+          ]
+        },
+        "client_updated_at": {
+          "type": "string",
+          "description": "Dernière modification côté client (résolution de conflit).",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?(Z|[+-]\\d{2}:\\d{2})$"
+        },
+        "device_time_offset_ms": {
+          "type": "integer",
+          "description": "Décalage horloge appareil − serveur mesuré lors de la dernière synchronisation (ms)."
+        },
+        "followup_stage": {
+          "description": "Clé de l'étape si ce payload est une réponse de suivi.",
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,39}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "parent_submission_uuid": {
+          "description": "UUID de la soumission de base pour un suivi.",
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "media": {
+          "type": "array",
+          "description": "Médias annoncés.",
+          "items": {
+            "$ref": "#/$defs/SubmissionMedia"
+          },
+          "default": []
+        }
+      },
+      "required": [
+        "uuid",
+        "survey_id",
+        "form_version",
+        "language",
+        "started_at",
+        "ended_at",
+        "answers",
+        "status",
+        "client_updated_at"
+      ],
+      "additionalProperties": false,
+      "examples": [
+        {
+          "uuid": "3f0c9c9a-7c9e-4c3b-9a1e-2b3f4c5d6e7f",
+          "survey_id": 12,
+          "form_version": 1,
+          "device_id": "android-8a1f",
+          "fiche_code": "DLA-BMP-07",
+          "zone": "Douala",
+          "language": "fr",
+          "started_at": "2026-09-15T09:40:12+01:00",
+          "ended_at": "2026-09-15T09:56:03+01:00",
+          "geo": {
+            "start": null,
+            "end": {
+              "lat": 4.0511,
+              "lng": 9.7679,
+              "accuracy": 12.5,
+              "ts": "2026-09-15T09:56:00+01:00"
+            }
+          },
+          "answers": {
+            "A_ville": "douala",
+            "A_quartier": "bonamoussadi",
+            "B_accepte": "oui",
+            "F2": [
+              "nounou",
+              "ecole_privee"
+            ],
+            "nb_signaux": 2
+          },
+          "end_reason": null,
+          "status": "completed",
+          "client_updated_at": "2026-09-15T09:56:05+01:00",
+          "device_time_offset_ms": -1200,
+          "followup_stage": null,
+          "parent_submission_uuid": null,
+          "media": []
+        }
+      ]
+    }
+  }
+}
