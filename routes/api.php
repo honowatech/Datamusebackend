@@ -159,6 +159,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::get('/surveys/{survey}/stats/geo', [StatsController::class, 'geo'])->whereNumber('survey')->name('surveys.stats.geo');
     Route::get('/surveys/{survey}/stats/crosstab', [StatsController::class, 'crosstab'])->whereNumber('survey')->name('surveys.stats.crosstab');
 
+    // ==== Analyse native (phase 1) ==== dictionnaire de variables + SQLite pour le calcul dans le navigateur (docs/analysis-api.md)
+    Route::get('/surveys/{survey}/analysis/dictionary', [\App\Http\Controllers\Survey\AnalysisController::class, 'dictionary'])->whereNumber('survey')->name('surveys.analysis.dictionary');
+    Route::get('/surveys/{survey}/analysis/dataset', [\App\Http\Controllers\Survey\AnalysisController::class, 'dataset'])->whereNumber('survey')->name('surveys.analysis.dataset');
+    Route::get('/target-dbs/{database}/analysis/dictionary', [\App\Http\Controllers\Survey\AnalysisController::class, 'importedDictionary'])->whereNumber('database')->name('target-dbs.analysis.dictionary');
+
     Route::get('/surveys/{survey}/supervision/flags', [SupervisionController::class, 'flags'])->whereNumber('survey')->name('surveys.supervision.flags');
     Route::post('/surveys/{survey}/supervision/recompute', [SupervisionController::class, 'recompute'])->whereNumber('survey')->name('surveys.supervision.recompute');
 

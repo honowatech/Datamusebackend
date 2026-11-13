@@ -695,6 +695,48 @@ final class ReponsesLayout
     }
 
     /**
+     * Emplacement de chaque question dans les tables matérialisées, pour le dictionnaire de variables
+     * de l'analyse native (`AnalysisDictionaryService`) et le masquage des colonnes `pii`.
+     *
+     * - question de base ou d'étape : `table` = `reponses`, `cols` = rôles → colonnes de `reponses` ;
+     * - question d'un groupe répété : `table` = `rep_{groupe}` (format long, une ligne par instance),
+     *   `cols` = colonnes de cette table ; `wide_cols` liste ses colonnes `_n` dans `reponses` ;
+     * - `suivi_cols` : colonnes de la table `suivi` pour une question d'étape.
+     *
+     * @return list<array{entry: array<string, mixed>, table: string, cols: array<string, string>, wide_cols: list<string>, suivi_cols: list<string>}>
+     */
+    public function analysisBindings(): array
+    {
+        $this->finalize();
+
+        $out = [];
+        foreach ($this->baseBindings as $b) {
+            $out[$b['entry']] = ['entry' => $this->entries[$b['entry']], 'table' => 'reponses', 'cols' => $b['cols'], 'wide_cols' => [], 'suivi_cols' => []];
+        }
+        foreach ($this->repeats as $rep) {
+            foreach ($rep['bindings'] as $b) {
+                $out[$b['entry']] = ['entry' => $this->entries[$b['entry']], 'table' => $rep['table'], 'cols' => $b['cols'], 'wide_cols' => [], 'suivi_cols' => []];
+            }
+            foreach ($rep['per_instance'] as $bindings) {
+                foreach ($bindings as $b) {
+                    $out[$b['entry']]['wide_cols'] = array_merge($out[$b['entry']]['wide_cols'], array_values($b['cols']));
+                }
+            }
+        }
+        foreach ($this->stages as $stageKey => $stage) {
+            foreach ($stage['bindings'] as $b) {
+                $out[$b['entry']] = ['entry' => $this->entries[$b['entry']], 'table' => 'reponses', 'cols' => $b['cols'], 'wide_cols' => [], 'suivi_cols' => []];
+            }
+            foreach ($this->suivi['bindings'][$stageKey] ?? [] as $b) {
+                $out[$b['entry']]['suivi_cols'] = array_values($b['cols']);
+            }
+        }
+        ksort($out);
+
+        return array_values($out);
+    }
+
+    /**
      * Lignes de la table `questions` : question_key, section, etape, groupe, type, libelle, ordre, colonne.
      *
      * @return list<array<string, mixed>>
