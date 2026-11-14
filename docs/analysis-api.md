@@ -1,4 +1,4 @@
-# API d'analyse native — socle (phase 1) et rigueur d'enquête (chantier 3)
+# API d'analyse native — socle (phase 1), rigueur d'enquête (chantier 3), faits saillants (chantier 4)
 
 Le calcul statistique se fait dans le navigateur. Le backend fournit deux choses : le **dictionnaire
 de variables** d'une enquête et son **fichier SQLite**. Aucun appel LLM, PHP pur.
@@ -14,6 +14,8 @@ Toutes les routes sont sous `/api`, derrière `auth:sanctum` (jeton Bearer), com
 | `PUT /surveys/{id}/analysis/weighting` | analyste du projet (`update`) | JSON |
 | `GET /surveys/{id}/analysis/quotas` | superviseur | JSON |
 | `GET /surveys/{id}/analysis/cohorts` | superviseur | JSON |
+| `GET /surveys/{id}/analysis/highlights` | superviseur | JSON |
+| `PUT /surveys/{id}/analysis/highlights` | analyste du projet (`update`) | JSON |
 
 Erreurs communes : `401` sans jeton, `403` hors du projet ou rôle enquêteur, `404` enquête inconnue.
 
@@ -277,11 +279,72 @@ l'entretien s'est terminé pendant la même période.
 Ces deux dernières routes lisent la base principale, pas le SQLite : elles fonctionnent sans
 matérialisation.
 
-## Mise en production du chantier 3
+## 8. `GET` / `PUT /surveys/{id}/analysis/highlights` — faits saillants
 
-Une table est ajoutée (migration `2026_11_14_000038_create_survey_weighting_plans_table`). Sur
+La découverte automatique (croisement de toutes les paires de variables, correction des comparaisons
+multiples, classement par taille d'effet, rédaction par gabarits en français et en anglais) est
+**calculée dans le navigateur**, par le même moteur que les autres analyses — c'est lui qui applique
+la pondération. Le serveur **ne recalcule rien** : il enregistre le résultat pour que l'équipe voie
+les mêmes faits sans refaire le calcul, que les rapports produits côté serveur puissent s'y appuyer,
+et pour signaler un jeu périmé. Un seul jeu par enquête ; `PUT` le remplace en entier
+(`items: []` l'efface).
+
+```json
+{
+  "items": [
+    {
+      "variables": ["region", "satisfaction"],
+      "kind": "association",
+      "test": "chi2",
+      "statistic": 18.42,
+      "df": 4,
+      "p_value": 0.00102,
+      "p_adjusted": 0.0153,
+      "effect": { "name": "cramers_v", "value": 0.31 },
+      "n": 240,
+      "text": { "fr": "La satisfaction varie nettement selon la région…", "en": "Satisfaction differs…" },
+      "details": { "top_cell": { "row": "nord", "col": "5", "residual": 2.9 } }
+    }
+  ],
+  "dataset_materialized_at": "2026-11-13T09:41:07+00:00",
+  "current_materialized_at": "2026-11-13T09:41:07+00:00",
+  "stale": false,
+  "weighted": true,
+  "engine": "datamuse-web/1.0",
+  "params": { "alpha": 0.05, "correction": "benjamini-hochberg", "pairs_tested": 153 },
+  "computed_at": "2026-11-14T06:02:10+00:00",
+  "updated_by": { "id": 3, "name": "…" }
+}
+```
+
+Corps du `PUT` : `items` (obligatoire), `dataset_materialized_at`, `weighted`, `engine`, `params`.
+Les autres champs sont calculés par le serveur.
+
+- **Ordre** : `items` est conservé dans l'ordre reçu ; c'est le classement (par taille d'effet).
+  Au plus 200 faits.
+- **`variables`** : 1 à 3 `name` du dictionnaire. Une variable `pii` est refusée, même venant d'un
+  analyste, parce que le jeu est lu par tous les superviseurs.
+- **`text`** : obligatoire dans au moins une langue (`fr`, `en`), 1 000 caractères au plus chacune.
+- **`kind`, `test`, `effect.name`** : identifiants libres de 40 caractères au plus (lettres, chiffres,
+  `_`, `-`, `.`) — le serveur n'en impose pas la liste, c'est le moteur du navigateur qui la définit.
+- **`statistic`, `df`, `n`, `effect.value`** : nombres JSON ou `null` ; `p_value`, `p_adjusted` dans
+  `[0, 1]` ou `null`. `effect` vaut `{ name, value }` ou `null`.
+- **`details`** (par fait) et **`params`** : objets libres, 8 Ko au plus chacun, renvoyés tels quels.
+- **`dataset_materialized_at`** : recopier `dataset.materialized_at` du dictionnaire utilisé pour le
+  calcul. `stale` vaut `true` quand l'enquête a été rematérialisée depuis (ou quand cette date n'a
+  pas été fournie alors qu'un fichier existe). Un jeu périmé reste servi : à l'interface de proposer
+  de le recalculer.
+- En lecture, un fait dont une variable a quitté le dictionnaire (nouvelle version du questionnaire,
+  question devenue `pii`) n'est plus renvoyé.
+- `PUT` invalide → `422`, `errors` indexé par chemin (`items.0.variables.1`, `items.3.text`…). Rien
+  n'est enregistré. Un superviseur ne peut pas écrire (`403`).
+
+## Mise en production des chantiers 3 et 4
+
+Deux tables sont ajoutées (migrations `2026_11_14_000038_create_survey_weighting_plans_table` et
+`2026_11_14_000039_create_survey_analysis_highlights_table`). Sur
 l'hébergement mutualisé, où `artisan migrate` n'est pas disponible, l'exécuter une fois dans
-phpMyAdmin **avant** de déployer le code :
+phpMyAdmin **avant** de déployer le code, les exécuter une fois :
 
 ```sql
 CREATE TABLE `survey_weighting_plans` (
@@ -303,10 +366,31 @@ CREATE TABLE `survey_weighting_plans` (
 
 INSERT INTO `migrations` (`migration`, `batch`)
 SELECT '2026_11_14_000038_create_survey_weighting_plans_table', COALESCE(MAX(`batch`), 0) + 1 FROM `migrations`;
+
+CREATE TABLE `survey_analysis_highlights` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `survey_id` bigint unsigned NOT NULL,
+  `dataset_materialized_at` datetime DEFAULT NULL,
+  `weighted` tinyint(1) NOT NULL DEFAULT 0,
+  `engine` varchar(60) DEFAULT NULL,
+  `params` json DEFAULT NULL,
+  `items` json NOT NULL,
+  `updated_by` bigint unsigned DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `survey_analysis_highlights_survey_id_unique` (`survey_id`),
+  KEY `survey_analysis_highlights_updated_by_foreign` (`updated_by`),
+  CONSTRAINT `survey_analysis_highlights_survey_id_foreign` FOREIGN KEY (`survey_id`) REFERENCES `surveys` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `survey_analysis_highlights_updated_by_foreign` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `migrations` (`migration`, `batch`)
+SELECT '2026_11_14_000039_create_survey_analysis_highlights_table', COALESCE(MAX(`batch`), 0) + 1 FROM `migrations`;
 ```
 
 `deploy/datamuse-install.sql` (installation à neuf) n'a pas été régénéré : il ne contient pas encore
-cette table.
+ces tables.
 
 ## Reste à faire
 
@@ -314,4 +398,6 @@ cette table.
   plan de pondération ; aucune route serveur.
 - Téléchargement du SQLite d'un fichier importé (les imports sont en mode WAL : il faut un point de
   contrôle et une copie avant de servir le fichier).
-- Découverte automatique, verbatims natifs, barre de questions, rapports natifs (chantiers 4 à 7).
+- Brancher les faits saillants enregistrés sur la synthèse et les rapports (aujourd'hui alimentés
+  par `SurveyInsightContext`) : à faire avec les rapports natifs (chantier 7).
+- Verbatims natifs, barre de questions, rapports natifs (chantiers 5 à 7).

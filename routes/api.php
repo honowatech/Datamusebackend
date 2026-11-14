@@ -167,6 +167,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     Route::put('/surveys/{survey}/analysis/weighting', [\App\Http\Controllers\Survey\AnalysisRigorController::class, 'updateWeighting'])->whereNumber('survey')->name('surveys.analysis.weighting.update');
     Route::get('/surveys/{survey}/analysis/quotas', [\App\Http\Controllers\Survey\AnalysisRigorController::class, 'quotas'])->whereNumber('survey')->name('surveys.analysis.quotas');
     Route::get('/surveys/{survey}/analysis/cohorts', [\App\Http\Controllers\Survey\AnalysisRigorController::class, 'cohorts'])->whereNumber('survey')->name('surveys.analysis.cohorts');
+    // Chantier 4 — découverte automatique : faits saillants calculés par le navigateur, enregistrés pour l'équipe et les rapports
+    Route::get('/surveys/{survey}/analysis/highlights', [\App\Http\Controllers\Survey\AnalysisHighlightsController::class, 'show'])->whereNumber('survey')->name('surveys.analysis.highlights.show');
+    Route::put('/surveys/{survey}/analysis/highlights', [\App\Http\Controllers\Survey\AnalysisHighlightsController::class, 'update'])->whereNumber('survey')->name('surveys.analysis.highlights.update');
     Route::get('/target-dbs/{database}/analysis/dictionary', [\App\Http\Controllers\Survey\AnalysisController::class, 'importedDictionary'])->whereNumber('database')->name('target-dbs.analysis.dictionary');
 
     Route::get('/surveys/{survey}/supervision/flags', [SupervisionController::class, 'flags'])->whereNumber('survey')->name('surveys.supervision.flags');
