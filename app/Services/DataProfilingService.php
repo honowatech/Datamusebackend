@@ -69,6 +69,20 @@ class DataProfilingService
                     $profile['max'] = is_numeric($metrics->max_val) ? (float)$metrics->max_val : null;
                     $profile['mean'] = is_numeric($metrics->mean_val) ? (float)$metrics->mean_val : null;
                     $profile['stddev'] = is_numeric($metrics->stddev_val) ? (float)$metrics->stddev_val : null;
+
+                    // SQLite n'a ni STDDEV ni (selon la compilation) SQRT : somme des carrés des écarts
+                    // en SQL, racine en PHP. Écart-type de population, comme STDDEV() de MySQL.
+                    if ($driver !== 'mysql' && $driver !== 'pgsql') {
+                        $profile['stddev'] = null;
+                        if ($profile['count'] > 0 && $profile['mean'] !== null) {
+                            $ssRes = $connection->select(
+                                "SELECT SUM(($colNameQuoted - ?) * ($colNameQuoted - ?)) as ss FROM $subquery WHERE $colNameQuoted IS NOT NULL",
+                                [$profile['mean'], $profile['mean']]
+                            );
+                            $ss = $ssRes[0]->ss ?? null;
+                            $profile['stddev'] = is_numeric($ss) ? sqrt(max(0.0, (float)$ss) / $profile['count']) : null;
+                        }
+                    }
                     $profile['sum'] = is_numeric($metrics->sum_val) ? (float)$metrics->sum_val : null;
                     
                     $offset = floor($profile['count'] / 2);

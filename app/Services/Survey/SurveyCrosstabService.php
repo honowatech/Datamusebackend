@@ -6,6 +6,7 @@ use App\Enums\SubmissionStatus;
 use App\Models\Survey;
 use App\Models\SurveyDatasource;
 use App\Models\TargetDatabase;
+use App\Support\ChiSquareDistribution;
 use PDO;
 use Throwable;
 
@@ -233,6 +234,8 @@ class SurveyCrosstabService
             'n' => $n,
             'chi2' => $chi2,
             'p_value' => $p,
+            'df' => $chi2 === null ? null : self::degreesOfFreedom($rowTotals, $colTotals),
+            'cramers_v' => self::cramersV($chi2, $n, count($rowKeys), count($colKeys)),
         ];
     }
 
@@ -326,7 +329,9 @@ class SurveyCrosstabService
     // ------------------------------------------------------------------ khi²
 
     /**
-     * Khi² d'indépendance et `p_value` (approximation Wilson–Hilferty de la loi du khi²).
+     * Khi² d'indépendance et `p_value` exacte : `Q(k/2, χ²/2)` (gamma incomplète régularisée, PHP pur —
+     * `App\Support\ChiSquareDistribution`). La p-valeur est arrondie à 6 chiffres significatifs (et non à
+     * 6 décimales) : une association très forte donne `1.2e-15`, pas un `0` trompeur.
      *
      * @param  list<list<int>>  $matrix
      * @param  list<int>  $rowTotals
@@ -335,8 +340,8 @@ class SurveyCrosstabService
      */
     public static function chiSquare(array $matrix, array $rowTotals, array $colTotals, int $n): array
     {
-        $degrees = (count($rowTotals) - 1) * (count($colTotals) - 1);
-        if ($n === 0 || $degrees <= 0) {
+        $degrees = self::degreesOfFreedom($rowTotals, $colTotals);
+        if ($n === 0 || $degrees === null) {
             return [null, null];
         }
 
@@ -351,17 +356,43 @@ class SurveyCrosstabService
             }
         }
 
-        // Wilson–Hilferty : (χ²/k)^(1/3) ≈ N(1 − 2/(9k), 2/(9k)).
-        $factor = 2 / (9 * $degrees);
-        $z = ((($chi2 / $degrees) ** (1 / 3)) - (1 - $factor)) / sqrt($factor);
-        $p = 0.5 * self::erfc($z / sqrt(2));
+        $p = ChiSquareDistribution::survival($chi2, $degrees);
 
-        return [round($chi2, 4), round(max(0.0, min(1.0, $p)), 6)];
+        return [round($chi2, 4), (float) sprintf('%.6g', max(0.0, min(1.0, $p)))];
+    }
+
+    /**
+     * Degrés de liberté `(lignes − 1)(colonnes − 1)`, `null` si le tableau est dégénéré.
+     *
+     * @param  list<int>  $rowTotals
+     * @param  list<int>  $colTotals
+     */
+    public static function degreesOfFreedom(array $rowTotals, array $colTotals): ?int
+    {
+        $degrees = (count($rowTotals) - 1) * (count($colTotals) - 1);
+
+        return $degrees > 0 ? $degrees : null;
+    }
+
+    /**
+     * V de Cramér : `√(χ² / (n · min(lignes − 1, colonnes − 1)))`, entre 0 (indépendance) et 1.
+     * `null` quand le khi² n'est pas défini. Borné à 1 : avec un axe à réponses multiples, la somme
+     * des cellules dépasse `n` et le rapport brut peut légèrement excéder 1.
+     */
+    public static function cramersV(?float $chi2, int $n, int $rows, int $cols): ?float
+    {
+        $k = min($rows - 1, $cols - 1);
+        if ($chi2 === null || $n <= 0 || $k <= 0) {
+            return null;
+        }
+
+        return round(min(1.0, sqrt(max(0.0, $chi2) / ($n * $k))), 4);
     }
 
     /**
      * Fonction d'erreur complémentaire (PHP n'en fournit pas) — approximation de Numerical Recipes,
-     * erreur relative < 1,2·10⁻⁷, largement suffisante pour une `p_value` indicative.
+     * erreur relative < 1,2·10⁻⁷. N'est plus utilisée pour la `p_value` du khi² (calcul exact), conservée
+     * pour compatibilité.
      */
     public static function erfc(float $x): float
     {
