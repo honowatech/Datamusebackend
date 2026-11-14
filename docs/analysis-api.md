@@ -1,4 +1,4 @@
-# API d'analyse native — phase 1 (socle)
+# API d'analyse native — socle (phase 1) et rigueur d'enquête (chantier 3)
 
 Le calcul statistique se fait dans le navigateur. Le backend fournit deux choses : le **dictionnaire
 de variables** d'une enquête et son **fichier SQLite**. Aucun appel LLM, PHP pur.
@@ -10,6 +10,10 @@ Toutes les routes sont sous `/api`, derrière `auth:sanctum` (jeton Bearer), com
 | `GET /surveys/{id}/analysis/dictionary` | superviseur du projet (`viewSubmissions`, comme `stats/*`) | JSON |
 | `GET /surveys/{id}/analysis/dataset` | idem | SQLite binaire |
 | `GET /target-dbs/{id}/analysis/dictionary` | propriétaire du fichier importé | JSON |
+| `GET /surveys/{id}/analysis/weighting` | superviseur | JSON |
+| `PUT /surveys/{id}/analysis/weighting` | analyste du projet (`update`) | JSON |
+| `GET /surveys/{id}/analysis/quotas` | superviseur | JSON |
+| `GET /surveys/{id}/analysis/cohorts` | superviseur | JSON |
 
 Erreurs communes : `401` sans jeton, `403` hors du projet ou rôle enquêteur, `404` enquête inconnue.
 
@@ -178,8 +182,136 @@ Format inchangé, deux champs ajoutés :
 - `df` : degrés de liberté ;
 - `cramers_v` : V de Cramér, entre 0 et 1 (`null` quand le khi² n'est pas défini).
 
-## Reste à faire (hors phase 1)
+## 5. `GET` / `PUT /surveys/{id}/analysis/weighting` — plan de pondération
 
+Le serveur conserve et valide le plan ; **le calage sur marges (calcul des poids) se fait dans le
+navigateur**, sur le SQLite téléchargé. Un seul plan par enquête ; `PUT` le remplace en entier.
+
+```json
+{
+  "enabled": true,
+  "margins": [
+    { "variable": "sexe", "targets": [{ "code": "f", "share": 0.52 }, { "code": "h", "share": 0.48 }] }
+  ],
+  "bounds": { "min": 0.2, "max": 5 },
+  "updated_at": "2026-11-14T05:12:44+00:00",
+  "updated_by": { "id": 3, "name": "…" },
+  "warnings": []
+}
+```
+
+- Sans plan enregistré, `GET` renvoie `enabled: false`, `margins: []`, `bounds: { min: null, max: null }`.
+- `margins[].variable` est le `name` d'une variable du dictionnaire, de niveau `nominal` ou `ordinal`,
+  située dans la table `reponses` (une valeur par soumission) et non marquée `pii`. Au plus 10 marges,
+  une seule par variable.
+- `targets` : au moins deux `{ code, share }`. `share` peut être envoyé dans n'importe quelle unité
+  positive (parts, pourcentages, effectifs de population) : le serveur le ramène à des parts de
+  somme 1 et renvoie ces parts. Si la variable a des `choices`, chaque `code` doit en faire partie.
+- `bounds` : bornage des poids, relatifs à un poids moyen de 1. `min` dans `]0, 1]`, `max` ≥ 1, ou
+  `null` pour ne pas borner.
+- `enabled` : facultatif en écriture (par défaut `true` s'il y a au moins une marge).
+- `warnings` : marges devenues inapplicables (variable ou modalité disparue du questionnaire). Le
+  plan est conservé tel quel ; le navigateur doit ignorer ces marges.
+- `PUT` invalide → `422` `{ success: false, message, errors }`, les clés d'`errors` étant des chemins
+  (`margins.0.variable`, `margins.1.targets.2.share`, `bounds.min`…). Rien n'est enregistré.
+- Un superviseur peut lire le plan mais pas le modifier (`403`).
+
+## 6. `GET /surveys/{id}/analysis/quotas` — avancement des quotas
+
+Quotas déclarés dans `settings.quotas` du questionnaire publié, comptés sur les fiches valides (ni
+rejetées ni hors cible) — mêmes chiffres que `stats/overview`.
+
+```json
+{
+  "quotas": [
+    {
+      "key": "par_sexe", "label": "Fiches par sexe", "scope": "answer",
+      "target": 3, "current": 3, "pct": 100.0, "max": false, "exceeded": false,
+      "breakdown": [{ "value": "f", "current": 3, "target": 3 }, { "value": "h", "current": 1, "target": 3 }],
+      "remaining": 0, "reached": true
+    }
+  ],
+  "generated_at": "2026-11-14T05:12:44+00:00"
+}
+```
+
+`scope` vaut `survey`, `zone`, `enumerator`, `answer` ou `distinct`. Pour `zone`, `enumerator` et
+`answer`, `current` est l'effectif de la modalité la plus avancée et `breakdown` détaille chaque
+modalité ; pour `distinct`, `current` est le nombre de valeurs distinctes. `remaining` et `reached`
+portent sur `current` face à `target`.
+
+## 7. `GET /surveys/{id}/analysis/cohorts` — rétention par vague de suivi
+
+Paramètres : `by` = `day`, `week` (défaut) ou `month` ; `tz` (défaut : celui des stats) ; `lang` ;
+et les filtres des stats (`from`, `to`, `enumerator_id`, `zone`, `status`). Sans filtre `status`, les
+fiches rejetées sont exclues. `422` si `by` ou `tz` est invalide.
+
+Une cohorte regroupe les soumissions **entrées dans le suivi** (au moins une étape planifiée) dont
+l'entretien s'est terminé pendant la même période.
+
+```json
+{
+  "by": "week",
+  "tz": "Africa/Douala",
+  "stages": [{ "key": "j4", "label": "Suivi à 4 jours", "due_offset_days": 4, "window_days": 3 }],
+  "overall": {
+    "base": 6,
+    "stages": [{ "key": "j4", "planned": 6, "done": 4, "missed": 1, "skipped": 0, "pending": 1,
+                 "retention": 0.6667, "response_rate": 0.8 }]
+  },
+  "cohorts": [
+    { "period": "2026-W10", "start": "2026-03-02", "base": 4, "stages": [ … ] }
+  ],
+  "generated_at": "2026-11-14T05:12:44+00:00"
+}
+```
+
+- `base` : nombre de soumissions de la cohorte.
+- `planned` : entrées de suivi créées pour l'étape (une étape conditionnelle peut ne pas concerner
+  toute la cohorte).
+- `retention` = `done / base` ; `response_rate` = `done / (done + missed + skipped)`. `null` quand le
+  dénominateur est nul.
+- `period` : `AAAA-MM-JJ`, `AAAA-Wss` (semaine ISO, `start` = lundi) ou `AAAA-MM`.
+- `stages` suit l'ordre du questionnaire ; chaque `stages` de cohorte est dans le même ordre.
+
+Ces deux dernières routes lisent la base principale, pas le SQLite : elles fonctionnent sans
+matérialisation.
+
+## Mise en production du chantier 3
+
+Une table est ajoutée (migration `2026_11_14_000038_create_survey_weighting_plans_table`). Sur
+l'hébergement mutualisé, où `artisan migrate` n'est pas disponible, l'exécuter une fois dans
+phpMyAdmin **avant** de déployer le code :
+
+```sql
+CREATE TABLE `survey_weighting_plans` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `survey_id` bigint unsigned NOT NULL,
+  `enabled` tinyint(1) NOT NULL DEFAULT 1,
+  `margins` json NOT NULL,
+  `min_weight` decimal(8,4) DEFAULT NULL,
+  `max_weight` decimal(8,4) DEFAULT NULL,
+  `updated_by` bigint unsigned DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `survey_weighting_plans_survey_id_unique` (`survey_id`),
+  KEY `survey_weighting_plans_updated_by_foreign` (`updated_by`),
+  CONSTRAINT `survey_weighting_plans_survey_id_foreign` FOREIGN KEY (`survey_id`) REFERENCES `surveys` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `survey_weighting_plans_updated_by_foreign` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `migrations` (`migration`, `batch`)
+SELECT '2026_11_14_000038_create_survey_weighting_plans_table', COALESCE(MAX(`batch`), 0) + 1 FROM `migrations`;
+```
+
+`deploy/datamuse-install.sql` (installation à neuf) n'a pas été régénéré : il ne contient pas encore
+cette table.
+
+## Reste à faire
+
+- Marges d'erreur et intervalles de confiance : calculés dans le navigateur à partir du SQLite et du
+  plan de pondération ; aucune route serveur.
 - Téléchargement du SQLite d'un fichier importé (les imports sont en mode WAL : il faut un point de
   contrôle et une copie avant de servir le fichier).
-- Pondération, découverte automatique, verbatims natifs, barre de questions.
+- Découverte automatique, verbatims natifs, barre de questions, rapports natifs (chantiers 4 à 7).

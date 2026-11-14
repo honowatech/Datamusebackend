@@ -162,6 +162,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // ==== Analyse native (phase 1) ==== dictionnaire de variables + SQLite pour le calcul dans le navigateur (docs/analysis-api.md)
     Route::get('/surveys/{survey}/analysis/dictionary', [\App\Http\Controllers\Survey\AnalysisController::class, 'dictionary'])->whereNumber('survey')->name('surveys.analysis.dictionary');
     Route::get('/surveys/{survey}/analysis/dataset', [\App\Http\Controllers\Survey\AnalysisController::class, 'dataset'])->whereNumber('survey')->name('surveys.analysis.dataset');
+    // Chantier 3 — rigueur d'enquête : plan de pondération, avancement des quotas, rétention par vague de suivi
+    Route::get('/surveys/{survey}/analysis/weighting', [\App\Http\Controllers\Survey\AnalysisRigorController::class, 'weighting'])->whereNumber('survey')->name('surveys.analysis.weighting.show');
+    Route::put('/surveys/{survey}/analysis/weighting', [\App\Http\Controllers\Survey\AnalysisRigorController::class, 'updateWeighting'])->whereNumber('survey')->name('surveys.analysis.weighting.update');
+    Route::get('/surveys/{survey}/analysis/quotas', [\App\Http\Controllers\Survey\AnalysisRigorController::class, 'quotas'])->whereNumber('survey')->name('surveys.analysis.quotas');
+    Route::get('/surveys/{survey}/analysis/cohorts', [\App\Http\Controllers\Survey\AnalysisRigorController::class, 'cohorts'])->whereNumber('survey')->name('surveys.analysis.cohorts');
     Route::get('/target-dbs/{database}/analysis/dictionary', [\App\Http\Controllers\Survey\AnalysisController::class, 'importedDictionary'])->whereNumber('database')->name('target-dbs.analysis.dictionary');
 
     Route::get('/surveys/{survey}/supervision/flags', [SupervisionController::class, 'flags'])->whereNumber('survey')->name('surveys.supervision.flags');
