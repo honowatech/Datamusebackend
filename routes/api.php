@@ -170,6 +170,15 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
     // Chantier 4 — découverte automatique : faits saillants calculés par le navigateur, enregistrés pour l'équipe et les rapports
     Route::get('/surveys/{survey}/analysis/highlights', [\App\Http\Controllers\Survey\AnalysisHighlightsController::class, 'show'])->whereNumber('survey')->name('surveys.analysis.highlights.show');
     Route::put('/surveys/{survey}/analysis/highlights', [\App\Http\Controllers\Survey\AnalysisHighlightsController::class, 'update'])->whereNumber('survey')->name('surveys.analysis.highlights.update');
+    // Chantier 5 — explorateur sans code : segments enregistrés et variables calculées (langage Logic)
+    Route::get('/surveys/{survey}/analysis/segments', [\App\Http\Controllers\Survey\AnalysisDefinitionsController::class, 'index'])->whereNumber('survey')->defaults('kind', 'segment')->name('surveys.analysis.segments.index');
+    Route::post('/surveys/{survey}/analysis/segments', [\App\Http\Controllers\Survey\AnalysisDefinitionsController::class, 'store'])->whereNumber('survey')->defaults('kind', 'segment')->name('surveys.analysis.segments.store');
+    Route::put('/surveys/{survey}/analysis/segments/{key}', [\App\Http\Controllers\Survey\AnalysisDefinitionsController::class, 'update'])->whereNumber('survey')->defaults('kind', 'segment')->name('surveys.analysis.segments.update');
+    Route::delete('/surveys/{survey}/analysis/segments/{key}', [\App\Http\Controllers\Survey\AnalysisDefinitionsController::class, 'destroy'])->whereNumber('survey')->defaults('kind', 'segment')->name('surveys.analysis.segments.destroy');
+    Route::get('/surveys/{survey}/analysis/computed-variables', [\App\Http\Controllers\Survey\AnalysisDefinitionsController::class, 'index'])->whereNumber('survey')->defaults('kind', 'variable')->name('surveys.analysis.computed-variables.index');
+    Route::post('/surveys/{survey}/analysis/computed-variables', [\App\Http\Controllers\Survey\AnalysisDefinitionsController::class, 'store'])->whereNumber('survey')->defaults('kind', 'variable')->name('surveys.analysis.computed-variables.store');
+    Route::put('/surveys/{survey}/analysis/computed-variables/{key}', [\App\Http\Controllers\Survey\AnalysisDefinitionsController::class, 'update'])->whereNumber('survey')->defaults('kind', 'variable')->name('surveys.analysis.computed-variables.update');
+    Route::delete('/surveys/{survey}/analysis/computed-variables/{key}', [\App\Http\Controllers\Survey\AnalysisDefinitionsController::class, 'destroy'])->whereNumber('survey')->defaults('kind', 'variable')->name('surveys.analysis.computed-variables.destroy');
     Route::get('/target-dbs/{database}/analysis/dictionary', [\App\Http\Controllers\Survey\AnalysisController::class, 'importedDictionary'])->whereNumber('database')->name('target-dbs.analysis.dictionary');
 
     Route::get('/surveys/{survey}/supervision/flags', [SupervisionController::class, 'flags'])->whereNumber('survey')->name('surveys.supervision.flags');

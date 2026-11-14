@@ -1,4 +1,4 @@
-# API d'analyse native — socle (phase 1), rigueur d'enquête (chantier 3), faits saillants (chantier 4)
+# API d'analyse native — socle (phase 1), rigueur d'enquête (chantier 3), faits saillants (chantier 4), explorateur (chantier 5)
 
 Le calcul statistique se fait dans le navigateur. Le backend fournit deux choses : le **dictionnaire
 de variables** d'une enquête et son **fichier SQLite**. Aucun appel LLM, PHP pur.
@@ -16,6 +16,8 @@ Toutes les routes sont sous `/api`, derrière `auth:sanctum` (jeton Bearer), com
 | `GET /surveys/{id}/analysis/cohorts` | superviseur | JSON |
 | `GET /surveys/{id}/analysis/highlights` | superviseur | JSON |
 | `PUT /surveys/{id}/analysis/highlights` | analyste du projet (`update`) | JSON |
+| `GET /surveys/{id}/analysis/segments`, `…/computed-variables` | superviseur | JSON |
+| `POST`, `PUT …/{key}`, `DELETE …/{key}` sur ces deux ressources | analyste du projet (`update`) | JSON / `204` |
 
 Erreurs communes : `401` sans jeton, `403` hors du projet ou rôle enquêteur, `404` enquête inconnue.
 
@@ -339,10 +341,75 @@ Les autres champs sont calculés par le serveur.
 - `PUT` invalide → `422`, `errors` indexé par chemin (`items.0.variables.1`, `items.3.text`…). Rien
   n'est enregistré. Un superviseur ne peut pas écrire (`403`).
 
-## Mise en production des chantiers 3 et 4
+## 9. Segments enregistrés et variables calculées (explorateur sans code)
 
-Deux tables sont ajoutées (migrations `2026_11_14_000038_create_survey_weighting_plans_table` et
-`2026_11_14_000039_create_survey_analysis_highlights_table`). Sur
+Deux ressources de même forme :
+
+- `…/analysis/segments` — un **segment** est une expression booléenne ; une soumission lui appartient
+  quand elle est vraie ;
+- `…/analysis/computed-variables` — une **variable calculée** produit une valeur par soumission, avec
+  un niveau de mesure déclaré (`level`).
+
+Les expressions sont écrites dans le **langage Logic** du DFS (mêmes opérateurs et arités que dans un
+questionnaire : `==`, `!=`, `<`, `<=`, `>`, `>=`, `and`, `or`, `!`, `if`, `in`, `selected`,
+`count_selected`, `answered`, `empty`, `coalesce`, `concat`, `+`, `-`, `*`, `/`, `%`, `regex`,
+`length`, `today`, `now`, `date_diff`). `{"var": "<nom>"}` désigne une variable du dictionnaire par
+son `name` (métadonnées `_zone`, `_canal`… comprises) ; sa valeur est celle de la colonne SQLite
+(le code pour un choix, la liste des codes pour un niveau `multiple`).
+
+**L'évaluation ligne à ligne se fait dans le navigateur.** Le serveur conserve les définitions et en
+garantit la validité.
+
+| Méthode | Route | Réponse |
+|---|---|---|
+| `GET` | `…/analysis/segments` | liste, triée par libellé |
+| `POST` | `…/analysis/segments` | `201` + la définition |
+| `PUT` | `…/analysis/segments/{key}` | la définition remplacée |
+| `DELETE` | `…/analysis/segments/{key}` | `204` |
+
+(idem avec `computed-variables`.)
+
+```json
+{
+  "key": "tranche_age",
+  "label": "Tranche d'âge",
+  "description": null,
+  "level": "ordinal",
+  "expression": { "if": [{ "<": [{ "var": "age" }, 30] }, "jeune", "senior"] },
+  "references": ["age"],
+  "missing": [],
+  "valid": true,
+  "updated_at": "2026-11-14T08:40:12+00:00",
+  "updated_by": { "id": 3, "name": "…" }
+}
+```
+
+- Corps de `POST` / `PUT` : `label` (obligatoire, 120 caractères), `expression` (obligatoire),
+  `description` (500 caractères), `level` (variables calculées seulement, obligatoire : `nominal`,
+  `ordinal`, `numeric`, `date` ou `text`), `key` (à la création seulement).
+- `key` : minuscule puis minuscules, chiffres, `_` (40 caractères). Omise, elle est dérivée du
+  libellé. Elle n'est pas modifiable ; la clé d'une variable calculée ne peut pas être le nom d'une
+  variable du dictionnaire. Un segment n'a pas de champ `level`.
+- Variables citables : celles du dictionnaire **hors `pii`** (les définitions sont partagées avec tous
+  les superviseurs). Un segment peut en plus citer une variable calculée par sa clé ; une variable
+  calculée ne peut pas en citer une autre (pas de chaîne de calculs, donc pas de cycle).
+- `references` liste les variables citées ; `missing` celles qui n'existent plus (nouvelle version du
+  questionnaire, question devenue `pii`) ; `valid` vaut `false` dans ce cas. La définition est
+  conservée : à l'interface de la signaler et de ne pas l'appliquer.
+- Supprimer une variable calculée encore citée par un segment → `409`
+  `{ code: "variable_in_use", segments: [clés] }`.
+- Invalide → `422`, `errors` indexé par chemin dans l'expression (`expression.==.0.var`,
+  `expression.and.1`, `label`, `key`, `level`). Au plus 100 définitions par ressource et par enquête ;
+  expression de 16 Ko et 32 niveaux au plus.
+
+Le **tableau croisé dynamique** n'a pas de route : il se calcule dans le navigateur. La **barre de
+questions à grammaire fixe** n'est pas faite (voir « Reste à faire »).
+
+## Mise en production des chantiers 3 à 5
+
+Trois tables sont ajoutées (migrations `2026_11_14_000038_create_survey_weighting_plans_table`,
+`2026_11_14_000039_create_survey_analysis_highlights_table` et
+`2026_11_14_000040_create_survey_analysis_definitions_table`). Sur
 l'hébergement mutualisé, où `artisan migrate` n'est pas disponible, l'exécuter une fois dans
 phpMyAdmin **avant** de déployer le code, les exécuter une fois :
 
@@ -387,6 +454,31 @@ CREATE TABLE `survey_analysis_highlights` (
 
 INSERT INTO `migrations` (`migration`, `batch`)
 SELECT '2026_11_14_000039_create_survey_analysis_highlights_table', COALESCE(MAX(`batch`), 0) + 1 FROM `migrations`;
+
+CREATE TABLE `survey_analysis_definitions` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `survey_id` bigint unsigned NOT NULL,
+  `kind` varchar(20) NOT NULL,
+  `key` varchar(40) NOT NULL,
+  `label` varchar(120) NOT NULL,
+  `description` varchar(500) DEFAULT NULL,
+  `level` varchar(20) DEFAULT NULL,
+  `expression` json NOT NULL,
+  `created_by` bigint unsigned DEFAULT NULL,
+  `updated_by` bigint unsigned DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `survey_analysis_definitions_survey_id_kind_key_unique` (`survey_id`,`kind`,`key`),
+  KEY `survey_analysis_definitions_created_by_foreign` (`created_by`),
+  KEY `survey_analysis_definitions_updated_by_foreign` (`updated_by`),
+  CONSTRAINT `survey_analysis_definitions_survey_id_foreign` FOREIGN KEY (`survey_id`) REFERENCES `surveys` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `survey_analysis_definitions_created_by_foreign` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `survey_analysis_definitions_updated_by_foreign` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `migrations` (`migration`, `batch`)
+SELECT '2026_11_14_000040_create_survey_analysis_definitions_table', COALESCE(MAX(`batch`), 0) + 1 FROM `migrations`;
 ```
 
 `deploy/datamuse-install.sql` (installation à neuf) n'a pas été régénéré : il ne contient pas encore
@@ -400,4 +492,7 @@ ces tables.
   contrôle et une copie avant de servir le fichier).
 - Brancher les faits saillants enregistrés sur la synthèse et les rapports (aujourd'hui alimentés
   par `SurveyInsightContext`) : à faire avec les rapports natifs (chantier 7).
-- Verbatims natifs, barre de questions, rapports natifs (chantiers 5 à 7).
+- Barre de questions à grammaire fixe (fin du chantier 5, phase 4 du plan) : non faite. Il reste à
+  décider où elle vit — dans le navigateur, hors ligne, ou côté serveur avant l'appel au LLM de
+  `/chat/generate-sql`.
+- Verbatims natifs et rapports natifs (chantiers 6 et 7).
